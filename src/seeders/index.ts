@@ -36,7 +36,7 @@ class DatabaseSeeder {
         password: await this.hashPassword("Manager123!"),
         fullName: "Branch Manager",
         phone: "081234567891",
-        role: "admin" as const,
+        role: "manager" as const,
         isActive: true,
         emailVerified: true,
         emailVerifiedAt: new Date(),

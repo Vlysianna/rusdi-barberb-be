@@ -1,23 +1,28 @@
-import bcrypt from 'bcryptjs';
-import { eq } from 'drizzle-orm';
-import { db } from '../config/database';
-import { users, type User, type NewUser } from '../models/user';
-import jwtConfig from '../config/jwt';
+import bcrypt from "bcryptjs";
+import { eq } from "drizzle-orm";
+import { db } from "../config/database";
+import { users, type User, type NewUser } from "../models/user";
+import jwtConfig from "../config/jwt";
 import {
   AuthenticationError,
   ConflictError,
   NotFoundError,
-  BadRequestError
-} from '../middleware/errorHandler';
+  BadRequestError,
+} from "../middleware/errorHandler";
+
+// Frontend display user with uppercase role
+interface SanitizedUser extends Omit<User, "password" | "role"> {
+  role: "ADMIN" | "MANAGER" | "STYLIST" | "CUSTOMER";
+}
 
 export interface LoginResponse {
-  user: Omit<User, 'password'>;
+  user: SanitizedUser;
   token: string;
   refreshToken: string;
 }
 
 export interface RegisterResponse {
-  user: Omit<User, 'password'>;
+  user: SanitizedUser;
   token: string;
   refreshToken: string;
 }
@@ -35,26 +40,36 @@ class AuthService {
   /**
    * Compare password with hash
    */
-  private async comparePassword(password: string, hash: string): Promise<boolean> {
+  private async comparePassword(
+    password: string,
+    hash: string,
+  ): Promise<boolean> {
     return await bcrypt.compare(password, hash);
   }
 
   /**
-   * Remove password from user object
+   * Remove password from user object and transform role to uppercase
    */
-  private sanitizeUser(user: User): Omit<User, 'password'> {
+  private sanitizeUser(user: User): SanitizedUser {
     const { password, ...sanitizedUser } = user;
-    return sanitizedUser;
+    return {
+      ...sanitizedUser,
+      role: sanitizedUser.role.toUpperCase() as
+        | "ADMIN"
+        | "MANAGER"
+        | "STYLIST"
+        | "CUSTOMER",
+    };
   }
 
   /**
    * Generate tokens for user
    */
-  private generateTokens(user: Omit<User, 'password'>) {
+  private generateTokens(user: SanitizedUser, originalUser: User) {
     const payload = {
       userId: user.id,
       email: user.email,
-      role: user.role
+      role: originalUser.role, // Use original lowercase role for backend validation
     };
 
     const token = jwtConfig.generateToken(payload);
@@ -71,7 +86,7 @@ class AuthService {
     password: string;
     fullName: string;
     phone?: string;
-    role?: 'admin' | 'stylist' | 'customer';
+    role?: "admin" | "manager" | "stylist" | "customer";
   }): Promise<RegisterResponse> {
     try {
       // Check if user already exists
@@ -82,7 +97,7 @@ class AuthService {
         .limit(1);
 
       if (existingUser.length > 0) {
-        throw new ConflictError('User with this email already exists');
+        throw new ConflictError("User with this email already exists");
       }
 
       // Hash password
@@ -94,9 +109,9 @@ class AuthService {
         password: hashedPassword,
         fullName: userData.fullName,
         phone: userData.phone,
-        role: userData.role || 'customer',
+        role: userData.role || "customer",
         isActive: true,
-        emailVerified: false
+        emailVerified: false,
       };
 
       // Insert user into database
@@ -110,25 +125,28 @@ class AuthService {
         .limit(1);
 
       if (!createdUser) {
-        throw new Error('Failed to create user');
+        throw new Error("Failed to create user");
       }
 
       // Remove password from response
       const sanitizedUser = this.sanitizeUser(createdUser);
 
       // Generate tokens
-      const { token, refreshToken } = this.generateTokens(sanitizedUser);
+      const { token, refreshToken } = this.generateTokens(
+        sanitizedUser,
+        createdUser,
+      );
 
       return {
         user: sanitizedUser,
         token,
-        refreshToken
+        refreshToken,
       };
     } catch (error) {
       if (error instanceof ConflictError) {
         throw error;
       }
-      throw new Error('Registration failed');
+      throw new Error("Registration failed");
     }
   }
 
@@ -145,44 +163,49 @@ class AuthService {
         .limit(1);
 
       if (!user) {
-        throw new AuthenticationError('Invalid email or password');
+        throw new AuthenticationError("Invalid email or password");
       }
 
       // Check if user is active
       if (!user.isActive) {
-        throw new AuthenticationError('Account has been deactivated');
+        throw new AuthenticationError("Account has been deactivated");
       }
 
       // Compare passwords
-      const isPasswordValid = await this.comparePassword(password, user.password);
+      const isPasswordValid = await this.comparePassword(
+        password,
+        user.password,
+      );
 
       if (!isPasswordValid) {
-        throw new AuthenticationError('Invalid email or password');
+        throw new AuthenticationError("Invalid email or password");
       }
 
       // Remove password from response
       const sanitizedUser = this.sanitizeUser(user);
 
       // Generate tokens
-      const { token, refreshToken } = this.generateTokens(sanitizedUser);
+      const { token, refreshToken } = this.generateTokens(sanitizedUser, user);
 
       return {
         user: sanitizedUser,
         token,
-        refreshToken
+        refreshToken,
       };
     } catch (error) {
       if (error instanceof AuthenticationError) {
         throw error;
       }
-      throw new AuthenticationError('Login failed');
+      throw new AuthenticationError("Login failed");
     }
   }
 
   /**
    * Refresh access token
    */
-  async refreshToken(refreshToken: string): Promise<{ token: string; refreshToken: string }> {
+  async refreshToken(
+    refreshToken: string,
+  ): Promise<{ token: string; refreshToken: string }> {
     try {
       // Verify refresh token
       const decoded = jwtConfig.verifyToken(refreshToken);
@@ -195,17 +218,17 @@ class AuthService {
         .limit(1);
 
       if (!user || !user.isActive) {
-        throw new AuthenticationError('Invalid refresh token');
+        throw new AuthenticationError("Invalid refresh token");
       }
 
       const sanitizedUser = this.sanitizeUser(user);
 
       // Generate new tokens
-      const tokens = this.generateTokens(sanitizedUser);
+      const tokens = this.generateTokens(sanitizedUser, user);
 
       return tokens;
     } catch (error) {
-      throw new AuthenticationError('Token refresh failed');
+      throw new AuthenticationError("Token refresh failed");
     }
   }
 
@@ -215,7 +238,7 @@ class AuthService {
   async changePassword(
     userId: string,
     currentPassword: string,
-    newPassword: string
+    newPassword: string,
   ): Promise<void> {
     try {
       // Get user
@@ -226,17 +249,17 @@ class AuthService {
         .limit(1);
 
       if (!user) {
-        throw new NotFoundError('User not found');
+        throw new NotFoundError("User not found");
       }
 
       // Verify current password
       const isCurrentPasswordValid = await this.comparePassword(
         currentPassword,
-        user.password
+        user.password,
       );
 
       if (!isCurrentPasswordValid) {
-        throw new BadRequestError('Current password is incorrect');
+        throw new BadRequestError("Current password is incorrect");
       }
 
       // Hash new password
@@ -247,14 +270,14 @@ class AuthService {
         .update(users)
         .set({
           password: hashedNewPassword,
-          updatedAt: new Date()
+          updatedAt: new Date(),
         })
         .where(eq(users.id, userId));
     } catch (error) {
       if (error instanceof NotFoundError || error instanceof BadRequestError) {
         throw error;
       }
-      throw new Error('Password change failed');
+      throw new Error("Password change failed");
     }
   }
 
@@ -271,7 +294,7 @@ class AuthService {
         .limit(1);
 
       if (!user) {
-        throw new NotFoundError('User not found');
+        throw new NotFoundError("User not found");
       }
 
       // Hash new password
@@ -282,14 +305,14 @@ class AuthService {
         .update(users)
         .set({
           password: hashedPassword,
-          updatedAt: new Date()
+          updatedAt: new Date(),
         })
         .where(eq(users.id, user.id));
     } catch (error) {
       if (error instanceof NotFoundError) {
         throw error;
       }
-      throw new Error('Password reset failed');
+      throw new Error("Password reset failed");
     }
   }
 
@@ -303,11 +326,11 @@ class AuthService {
         .set({
           emailVerified: true,
           emailVerifiedAt: new Date(),
-          updatedAt: new Date()
+          updatedAt: new Date(),
         })
         .where(eq(users.id, userId));
     } catch (error) {
-      throw new Error('Email verification failed');
+      throw new Error("Email verification failed");
     }
   }
 
@@ -320,11 +343,11 @@ class AuthService {
         .update(users)
         .set({
           isActive: false,
-          updatedAt: new Date()
+          updatedAt: new Date(),
         })
         .where(eq(users.id, userId));
     } catch (error) {
-      throw new Error('Account deactivation failed');
+      throw new Error("Account deactivation failed");
     }
   }
 
@@ -337,18 +360,18 @@ class AuthService {
         .update(users)
         .set({
           isActive: true,
-          updatedAt: new Date()
+          updatedAt: new Date(),
         })
         .where(eq(users.id, userId));
     } catch (error) {
-      throw new Error('Account activation failed');
+      throw new Error("Account activation failed");
     }
   }
 
   /**
    * Get user by ID (without password)
    */
-  async getUserById(userId: string): Promise<Omit<User, 'password'> | null> {
+  async getUserById(userId: string): Promise<SanitizedUser | null> {
     try {
       const [user] = await db
         .select()
@@ -362,14 +385,14 @@ class AuthService {
 
       return this.sanitizeUser(user);
     } catch (error) {
-      throw new Error('Failed to get user');
+      throw new Error("Failed to get user");
     }
   }
 
   /**
    * Get user by email (without password)
    */
-  async getUserByEmail(email: string): Promise<Omit<User, 'password'> | null> {
+  async getUserByEmail(email: string): Promise<SanitizedUser | null> {
     try {
       const [user] = await db
         .select()
@@ -383,7 +406,7 @@ class AuthService {
 
       return this.sanitizeUser(user);
     } catch (error) {
-      throw new Error('Failed to get user');
+      throw new Error("Failed to get user");
     }
   }
 
@@ -396,19 +419,19 @@ class AuthService {
       fullName?: string;
       phone?: string;
       dateOfBirth?: Date;
-      gender?: 'male' | 'female';
+      gender?: "male" | "female";
       address?: string;
       preferences?: string;
       avatar?: string;
-    }
-  ): Promise<Omit<User, 'password'>> {
+    },
+  ): Promise<SanitizedUser> {
     try {
       // Update user
       await db
         .update(users)
         .set({
           ...updateData,
-          updatedAt: new Date()
+          updatedAt: new Date(),
         })
         .where(eq(users.id, userId));
 
@@ -420,7 +443,7 @@ class AuthService {
         .limit(1);
 
       if (!updatedUser) {
-        throw new NotFoundError('User not found');
+        throw new NotFoundError("User not found");
       }
 
       return this.sanitizeUser(updatedUser);
@@ -428,7 +451,7 @@ class AuthService {
       if (error instanceof NotFoundError) {
         throw error;
       }
-      throw new Error('Profile update failed');
+      throw new Error("Profile update failed");
     }
   }
 
@@ -439,8 +462,8 @@ class AuthService {
   generatePasswordResetToken(email: string): string {
     const payload = {
       email,
-      type: 'password_reset',
-      timestamp: Date.now()
+      type: "password_reset",
+      timestamp: Date.now(),
     };
 
     return jwtConfig.generateToken(payload as any);
@@ -453,8 +476,8 @@ class AuthService {
     try {
       const decoded = jwtConfig.verifyToken(token) as any;
 
-      if (decoded.type !== 'password_reset') {
-        return { email: '', isValid: false };
+      if (decoded.type !== "password_reset") {
+        return { email: "", isValid: false };
       }
 
       // Check if token is not older than 1 hour
@@ -462,12 +485,12 @@ class AuthService {
       const oneHour = 60 * 60 * 1000;
 
       if (tokenAge > oneHour) {
-        return { email: '', isValid: false };
+        return { email: "", isValid: false };
       }
 
       return { email: decoded.email, isValid: true };
     } catch (error) {
-      return { email: '', isValid: false };
+      return { email: "", isValid: false };
     }
   }
 }

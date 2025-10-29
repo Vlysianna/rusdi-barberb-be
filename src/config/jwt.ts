@@ -4,7 +4,7 @@ import { Request } from "express";
 export interface JWTPayload {
   userId: string;
   email: string;
-  role: "admin" | "stylist" | "customer";
+  role: "admin" | "manager" | "stylist" | "customer";
   iat?: number;
   exp?: number;
 }

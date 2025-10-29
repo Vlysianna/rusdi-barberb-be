@@ -13,6 +13,7 @@ import authRoutes from "./routes/auth";
 import userRoutes from "./routes/users";
 import bookingRoutes from "./routes/bookings";
 import paymentRoutes from "./routes/payments";
+import dashboardRoutes from "./routes/dashboard";
 
 // Load environment variables
 dotenv.config();
@@ -36,7 +37,7 @@ class App {
 
     // CORS configuration
     const corsOptions = {
-      origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+      origin: process.env.CORS_ORIGIN || ["http://localhost:5173"],
       credentials: true,
       optionsSuccessStatus: 200,
       methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
@@ -85,6 +86,17 @@ class App {
       });
     });
 
+    // Health check endpoint for v1 API
+    this.app.get("/api/v1/health", (req, res) => {
+      res.status(200).json({
+        status: "OK",
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV || "development",
+        version: process.env.npm_package_version || "1.0.0",
+      });
+    });
+
     // API documentation endpoint
     this.app.get("/", (req, res) => {
       res.json({
@@ -93,14 +105,15 @@ class App {
         description: "Barber shop booking and management system API",
         endpoints: {
           health: "/health",
-          auth: "/api/auth",
-          users: "/api/users",
-          stylists: "/api/stylists",
-          services: "/api/services",
-          bookings: "/api/bookings",
-          payments: "/api/payments",
-          reviews: "/api/reviews",
-          notifications: "/api/notifications",
+          auth: "/api/v1/auth",
+          users: "/api/v1/users",
+          stylists: "/api/v1/stylists",
+          services: "/api/v1/services",
+          bookings: "/api/v1/bookings",
+          payments: "/api/v1/payments",
+          reviews: "/api/v1/reviews",
+          notifications: "/api/v1/notifications",
+          dashboard: "/api/v1/dashboard",
         },
         documentation: {
           message: "API documentation will be available soon",
@@ -111,7 +124,7 @@ class App {
   }
 
   private initializeRoutes(): void {
-    const apiPrefix = "/api";
+    const apiPrefix = "/api/v1";
 
     // Authentication routes
     this.app.use(`${apiPrefix}/auth`, authRoutes);
@@ -124,6 +137,9 @@ class App {
 
     // Payment routes
     this.app.use(`${apiPrefix}/payments`, paymentRoutes);
+
+    // Dashboard routes
+    this.app.use(`${apiPrefix}/dashboard`, dashboardRoutes);
 
     // TODO: Add other routes here as they are created
     // this.app.use(`${apiPrefix}/stylists`, stylistRoutes);

@@ -8,6 +8,13 @@
       "when": 1761377872787,
       "tag": "0000_concerned_rick_jones",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1761570910511,
+      "tag": "0001_motionless_namor",
+      "breakpoints": true
     }
   ]
 }

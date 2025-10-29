@@ -1,57 +1,58 @@
 export enum UserRole {
-  ADMIN = 'admin',
-  STYLIST = 'stylist',
-  CUSTOMER = 'customer'
+  ADMIN = "admin",
+  MANAGER = "manager",
+  STYLIST = "stylist",
+  CUSTOMER = "customer",
 }
 
 export enum BookingStatus {
-  PENDING = 'pending',
-  CONFIRMED = 'confirmed',
-  IN_PROGRESS = 'in_progress',
-  COMPLETED = 'completed',
-  CANCELLED = 'cancelled',
-  NO_SHOW = 'no_show'
+  PENDING = "pending",
+  CONFIRMED = "confirmed",
+  IN_PROGRESS = "in_progress",
+  COMPLETED = "completed",
+  CANCELLED = "cancelled",
+  NO_SHOW = "no_show",
 }
 
 export enum PaymentStatus {
-  PENDING = 'pending',
-  PAID = 'paid',
-  FAILED = 'failed',
-  REFUNDED = 'refunded'
+  PENDING = "pending",
+  PAID = "paid",
+  FAILED = "failed",
+  REFUNDED = "refunded",
 }
 
 export enum PaymentMethod {
-  CASH = 'cash',
-  CREDIT_CARD = 'credit_card',
-  DEBIT_CARD = 'debit_card',
-  DIGITAL_WALLET = 'digital_wallet',
-  BANK_TRANSFER = 'bank_transfer'
+  CASH = "cash",
+  CREDIT_CARD = "credit_card",
+  DEBIT_CARD = "debit_card",
+  DIGITAL_WALLET = "digital_wallet",
+  BANK_TRANSFER = "bank_transfer",
 }
 
 export enum NotificationType {
-  BOOKING_CONFIRMATION = 'booking_confirmation',
-  BOOKING_REMINDER = 'booking_reminder',
-  BOOKING_CANCELLED = 'booking_cancelled',
-  PAYMENT_SUCCESS = 'payment_success',
-  PAYMENT_FAILED = 'payment_failed',
-  REVIEW_REQUEST = 'review_request',
-  PROMOTION = 'promotion',
-  SYSTEM = 'system'
+  BOOKING_CONFIRMATION = "booking_confirmation",
+  BOOKING_REMINDER = "booking_reminder",
+  BOOKING_CANCELLED = "booking_cancelled",
+  PAYMENT_SUCCESS = "payment_success",
+  PAYMENT_FAILED = "payment_failed",
+  REVIEW_REQUEST = "review_request",
+  PROMOTION = "promotion",
+  SYSTEM = "system",
 }
 
 export enum ServiceCategory {
-  HAIRCUT = 'haircut',
-  BEARD_TRIM = 'beard_trim',
-  HAIR_WASH = 'hair_wash',
-  STYLING = 'styling',
-  COLORING = 'coloring',
-  TREATMENT = 'treatment',
-  PACKAGE = 'package'
+  HAIRCUT = "haircut",
+  BEARD_TRIM = "beard_trim",
+  HAIR_WASH = "hair_wash",
+  STYLING = "styling",
+  COLORING = "coloring",
+  TREATMENT = "treatment",
+  PACKAGE = "package",
 }
 
 export enum Gender {
-  MALE = 'male',
-  FEMALE = 'female'
+  MALE = "male",
+  FEMALE = "female",
 }
 
 // User related types
@@ -69,7 +70,7 @@ export interface User {
   updatedAt: Date;
 }
 
-export interface UserProfile extends Omit<User, 'password'> {
+export interface UserProfile extends Omit<User, "password"> {
   dateOfBirth?: Date;
   gender?: Gender;
   address?: string;
@@ -213,7 +214,7 @@ export interface PaginationQuery {
   page?: number;
   limit?: number;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
   search?: string;
 }
 

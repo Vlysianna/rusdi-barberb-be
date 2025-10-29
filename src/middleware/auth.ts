@@ -77,7 +77,7 @@ export const authorizeRoles = (...roles: UserRole[]) => {
       return;
     }
 
-    if (!roles.includes(req.user.role as UserRole)) {
+    if (!roles.map((role) => role.toLowerCase()).includes(req.user.role)) {
       ApiResponseUtil.forbidden(res, "Insufficient permissions");
       return;
     }
@@ -92,9 +92,18 @@ export const authorizeRoles = (...roles: UserRole[]) => {
 export const adminOnly = authorizeRoles(UserRole.ADMIN);
 
 /**
- * Stylist or Admin middleware
+ * Manager or Admin middleware
  */
-export const stylistOrAdmin = authorizeRoles(UserRole.STYLIST, UserRole.ADMIN);
+export const managerOrAdmin = authorizeRoles(UserRole.MANAGER, UserRole.ADMIN);
+
+/**
+ * Stylist, Manager or Admin middleware
+ */
+export const stylistOrAdmin = authorizeRoles(
+  UserRole.STYLIST,
+  UserRole.MANAGER,
+  UserRole.ADMIN,
+);
 
 /**
  * Customer or higher middleware (all authenticated users)
@@ -102,6 +111,7 @@ export const stylistOrAdmin = authorizeRoles(UserRole.STYLIST, UserRole.ADMIN);
 export const authenticatedUser = authorizeRoles(
   UserRole.CUSTOMER,
   UserRole.STYLIST,
+  UserRole.MANAGER,
   UserRole.ADMIN,
 );
 
@@ -125,8 +135,8 @@ export const resourceOwnerOrAdmin = (
     const resourceUserId =
       req.params[resourceUserIdField] || req.body[resourceUserIdField];
 
-    // Admin can access any resource
-    if (req.user.role === UserRole.ADMIN) {
+    // Admin and Manager can access any resource
+    if (req.user.role === "admin" || req.user.role === "manager") {
       next();
       return;
     }
@@ -158,10 +168,11 @@ export const customerResourceAccess = (
       return;
     }
 
-    // Admin and stylist can access all customer resources
+    // Admin, Manager and stylist can access all customer resources
     if (
-      req.user.role === UserRole.ADMIN ||
-      req.user.role === UserRole.STYLIST
+      req.user.role === "admin" ||
+      req.user.role === "manager" ||
+      req.user.role === "stylist"
     ) {
       next();
       return;
@@ -170,7 +181,7 @@ export const customerResourceAccess = (
     const customerId = req.params[customerIdField] || req.body[customerIdField];
 
     // Customer can only access their own resources
-    if (req.user.role === UserRole.CUSTOMER && req.user.userId === customerId) {
+    if (req.user.role === "customer" && req.user.userId === customerId) {
       next();
       return;
     }
@@ -194,15 +205,15 @@ export const stylistResourceAccess = (stylistIdField: string = "stylistId") => {
       return;
     }
 
-    // Admin can access all stylist resources
-    if (req.user.role === UserRole.ADMIN) {
+    // Admin and Manager can access all stylist resources
+    if (req.user.role === "admin" || req.user.role === "manager") {
       next();
       return;
     }
 
     // For stylists, we need to check if they own the stylist record
     // This would require a database lookup to get the stylist's userId
-    if (req.user.role === UserRole.STYLIST) {
+    if (req.user.role === "stylist") {
       // Note: In a real implementation, you'd query the database to check
       // if req.user.userId matches the stylist record's userId
       // For now, we'll allow it and let the business logic handle it
@@ -232,18 +243,15 @@ export const bookingAccess = () => {
       return;
     }
 
-    // Admin can access all bookings
-    if (req.user.role === UserRole.ADMIN) {
+    // Admin and Manager can access all bookings
+    if (req.user.role === "admin" || req.user.role === "manager") {
       next();
       return;
     }
 
     // For customers and stylists, we'll let the business logic in controllers
     // handle the specific access control based on database records
-    if (
-      req.user.role === UserRole.CUSTOMER ||
-      req.user.role === UserRole.STYLIST
-    ) {
+    if (req.user.role === "customer" || req.user.role === "stylist") {
       next();
       return;
     }
