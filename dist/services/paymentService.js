@@ -265,25 +265,38 @@ class PaymentService {
             if (endDate) {
                 whereConditions.push((0, drizzle_orm_1.lte)(payment_1.payments.createdAt, endDate));
             }
-            const statusStats = await database_1.db
-                .select({
-                status: payment_1.payments.status,
-                count: (0, drizzle_orm_1.count)(),
-            })
-                .from(payment_1.payments)
-                .where(whereConditions.length > 0 ? (0, drizzle_orm_1.and)(...whereConditions) : undefined)
-                .groupBy(payment_1.payments.status);
-            const methodStats = await database_1.db
-                .select({
-                method: payment_1.payments.method,
-                count: (0, drizzle_orm_1.count)(),
-            })
-                .from(payment_1.payments)
-                .where(whereConditions.length > 0 ? (0, drizzle_orm_1.and)(...whereConditions) : undefined)
-                .groupBy(payment_1.payments.method);
+            const [statusStats, methodStats, revenueStats] = await Promise.all([
+                database_1.db
+                    .select({
+                    status: payment_1.payments.status,
+                    count: (0, drizzle_orm_1.count)(),
+                })
+                    .from(payment_1.payments)
+                    .where(whereConditions.length > 0 ? (0, drizzle_orm_1.and)(...whereConditions) : undefined)
+                    .groupBy(payment_1.payments.status),
+                database_1.db
+                    .select({
+                    method: payment_1.payments.method,
+                    count: (0, drizzle_orm_1.count)(),
+                })
+                    .from(payment_1.payments)
+                    .where(whereConditions.length > 0 ? (0, drizzle_orm_1.and)(...whereConditions) : undefined)
+                    .groupBy(payment_1.payments.method),
+                database_1.db
+                    .select({
+                    totalRevenue: (0, drizzle_orm_1.sql) `COALESCE(SUM(CAST(${payment_1.payments.amount} AS DECIMAL(10,2))), 0)`,
+                    paidCount: (0, drizzle_orm_1.count)(),
+                })
+                    .from(payment_1.payments)
+                    .where(whereConditions.length > 0
+                    ? (0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(payment_1.payments.status, types_1.PaymentStatus.PAID), ...whereConditions)
+                    : (0, drizzle_orm_1.eq)(payment_1.payments.status, types_1.PaymentStatus.PAID)),
+            ]);
             return {
                 statusBreakdown: statusStats,
                 methodBreakdown: methodStats,
+                totalRevenue: revenueStats[0]?.totalRevenue || 0,
+                paidPaymentsCount: revenueStats[0]?.paidCount || 0,
             };
         }
         catch (error) {

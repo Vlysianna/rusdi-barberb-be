@@ -1,24 +1,25 @@
 import { Response, NextFunction } from "express";
 declare class ServiceController {
-    getServices: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
+    getAllServices: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
     getServiceById: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
     createService: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
     updateService: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
     deleteService: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
-    getCategories: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
-    createCategory: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
-    updateCategory: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
-    deleteCategory: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
-    getServiceAddons: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
-    createServiceAddon: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
-    updateServiceAddon: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
-    deleteServiceAddon: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
-    uploadServiceImage: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
-    getServiceStats: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
+    getActiveServices: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
     getPopularServices: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
-    searchServices: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
+    getServicesByCategory: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
+    getServiceCategories: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
+    updateServiceStatus: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
+    toggleServicePopularity: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
+    getServiceAnalytics: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
+    getServiceAvailability: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
+    getRecommendedServices: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
+    exportServices: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
+    getServicesByStylist: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
+    getServiceReviews: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
+    getServicePricingHistory: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
     bulkUpdateServices: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
 }
-declare const _default: ServiceController;
-export default _default;
+export declare const serviceController: ServiceController;
+export default serviceController;
 //# sourceMappingURL=serviceController.d.ts.map

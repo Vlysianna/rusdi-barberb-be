@@ -43,6 +43,8 @@ const database_1 = require("./config/database");
 const errorHandler_1 = require("./middleware/errorHandler");
 const auth_1 = __importDefault(require("./routes/auth"));
 const users_1 = __importDefault(require("./routes/users"));
+const stylists_1 = __importDefault(require("./routes/stylists"));
+const services_1 = __importDefault(require("./routes/services"));
 const bookings_1 = __importDefault(require("./routes/bookings"));
 const payments_1 = __importDefault(require("./routes/payments"));
 const dashboard_1 = __importDefault(require("./routes/dashboard"));
@@ -134,6 +136,8 @@ class App {
         const apiPrefix = "/api/v1";
         this.app.use(`${apiPrefix}/auth`, auth_1.default);
         this.app.use(`${apiPrefix}/users`, users_1.default);
+        this.app.use(`${apiPrefix}/stylists`, stylists_1.default);
+        this.app.use(`${apiPrefix}/services`, services_1.default);
         this.app.use(`${apiPrefix}/bookings`, bookings_1.default);
         this.app.use(`${apiPrefix}/payments`, payments_1.default);
         this.app.use(`${apiPrefix}/dashboard`, dashboard_1.default);

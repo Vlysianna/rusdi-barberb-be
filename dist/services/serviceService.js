@@ -184,6 +184,18 @@ class ServiceService {
             throw new errorHandler_1.DatabaseError("Failed to toggle service status");
         }
     }
+    async getActiveServices() {
+        try {
+            return await database_1.db
+                .select()
+                .from(service_1.services)
+                .where((0, drizzle_orm_1.eq)(service_1.services.isActive, true))
+                .orderBy((0, drizzle_orm_1.asc)(service_1.services.name));
+        }
+        catch (error) {
+            throw new errorHandler_1.DatabaseError("Failed to fetch active services");
+        }
+    }
     async getServicesByCategory(category) {
         try {
             return await database_1.db
@@ -243,15 +255,201 @@ class ServiceService {
                 totalServices: totalResult.count,
                 activeServices: activeResult.count,
                 servicesByCategory,
-                averagePrice: Math.round(averagePrice * 100) / 100,
-                averageDuration: Math.round(averageDuration),
+                averagePrice,
+                averageDuration,
             };
         }
         catch (error) {
             throw new errorHandler_1.DatabaseError("Failed to get service statistics");
         }
     }
-    async getPopularServices(limit = 5) {
+    async getServiceCategories() {
+        try {
+            const categoryStats = await database_1.db
+                .select({
+                category: service_1.services.category,
+                count: (0, drizzle_orm_1.count)(),
+            })
+                .from(service_1.services)
+                .where((0, drizzle_orm_1.eq)(service_1.services.isActive, true))
+                .groupBy(service_1.services.category);
+            return categoryStats.map((stat) => ({
+                value: stat.category,
+                label: stat.category.charAt(0).toUpperCase() + stat.category.slice(1),
+                count: stat.count,
+            }));
+        }
+        catch (error) {
+            throw new errorHandler_1.DatabaseError("Failed to get service categories");
+        }
+    }
+    async updateServiceStatus(id, isActive) {
+        try {
+            await this.getServiceById(id);
+            await database_1.db
+                .update(service_1.services)
+                .set({
+                isActive,
+                updatedAt: new Date(),
+            })
+                .where((0, drizzle_orm_1.eq)(service_1.services.id, id));
+            return await this.getServiceById(id);
+        }
+        catch (error) {
+            if (error instanceof errorHandler_1.NotFoundError) {
+                throw error;
+            }
+            throw new errorHandler_1.DatabaseError("Failed to update service status");
+        }
+    }
+    async toggleServicePopularity(id) {
+        try {
+            const service = await this.getServiceById(id);
+            await database_1.db
+                .update(service_1.services)
+                .set({
+                isPopular: !service.isPopular,
+                updatedAt: new Date(),
+            })
+                .where((0, drizzle_orm_1.eq)(service_1.services.id, id));
+            return await this.getServiceById(id);
+        }
+        catch (error) {
+            if (error instanceof errorHandler_1.NotFoundError) {
+                throw error;
+            }
+            throw new errorHandler_1.DatabaseError("Failed to toggle service popularity");
+        }
+    }
+    async getServiceAnalytics(id, dateFrom, dateTo) {
+        try {
+            await this.getServiceById(id);
+            return {
+                totalBookings: 0,
+                totalRevenue: "0.00",
+                averageRating: 0,
+                popularityRank: 1,
+                monthlyStats: [],
+                customerSatisfaction: [],
+            };
+        }
+        catch (error) {
+            if (error instanceof errorHandler_1.NotFoundError) {
+                throw error;
+            }
+            throw new errorHandler_1.DatabaseError("Failed to get service analytics");
+        }
+    }
+    async getServiceAvailability(id, date, time) {
+        try {
+            await this.getServiceById(id);
+            return {
+                isAvailable: true,
+                availableStylists: [],
+                nextAvailableSlot: null,
+            };
+        }
+        catch (error) {
+            if (error instanceof errorHandler_1.NotFoundError) {
+                throw error;
+            }
+            throw new errorHandler_1.DatabaseError("Failed to check service availability");
+        }
+    }
+    async getRecommendedServices(customerId) {
+        try {
+            return await database_1.db
+                .select()
+                .from(service_1.services)
+                .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(service_1.services.isActive, true), (0, drizzle_orm_1.eq)(service_1.services.isPopular, true)))
+                .orderBy((0, drizzle_orm_1.desc)(service_1.services.createdAt))
+                .limit(5);
+        }
+        catch (error) {
+            throw new errorHandler_1.DatabaseError("Failed to get recommended services");
+        }
+    }
+    async exportServices(format = "csv") {
+        try {
+            const allServices = await database_1.db.select().from(service_1.services);
+            if (format === "csv") {
+                const headers = "ID,Name,Description,Price,Duration,Category,Active,Popular\n";
+                const rows = allServices
+                    .map((service) => `${service.id},"${service.name}","${service.description}",${service.price},${service.duration},${service.category},${service.isActive},${service.isPopular || false}`)
+                    .join("\n");
+                return headers + rows;
+            }
+            return JSON.stringify(allServices, null, 2);
+        }
+        catch (error) {
+            throw new errorHandler_1.DatabaseError("Failed to export services");
+        }
+    }
+    async getServicesByStylist(stylistId) {
+        try {
+            return await this.getActiveServices();
+        }
+        catch (error) {
+            throw new errorHandler_1.DatabaseError("Failed to get services by stylist");
+        }
+    }
+    async getServiceReviews(id, page = 1, limit = 20) {
+        try {
+            await this.getServiceById(id);
+            return {
+                reviews: [],
+                total: 0,
+                averageRating: 0,
+                ratingDistribution: [],
+            };
+        }
+        catch (error) {
+            if (error instanceof errorHandler_1.NotFoundError) {
+                throw error;
+            }
+            throw new errorHandler_1.DatabaseError("Failed to get service reviews");
+        }
+    }
+    async getServicePricingHistory(id) {
+        try {
+            const service = await this.getServiceById(id);
+            return {
+                priceHistory: [
+                    {
+                        price: service.price,
+                        effectiveDate: service.createdAt,
+                        changedBy: "System",
+                    },
+                ],
+                currentPrice: service.price,
+            };
+        }
+        catch (error) {
+            if (error instanceof errorHandler_1.NotFoundError) {
+                throw error;
+            }
+            throw new errorHandler_1.DatabaseError("Failed to get service pricing history");
+        }
+    }
+    async bulkUpdateServices(serviceIds, updates) {
+        try {
+            await database_1.db
+                .update(service_1.services)
+                .set({
+                ...updates,
+                updatedAt: new Date(),
+            })
+                .where((0, drizzle_orm_1.sql) `${service_1.services.id} IN (${serviceIds.map((id) => `'${id}'`).join(",")})`);
+            return await database_1.db
+                .select()
+                .from(service_1.services)
+                .where((0, drizzle_orm_1.sql) `${service_1.services.id} IN (${serviceIds.map((id) => `'${id}'`).join(",")})`);
+        }
+        catch (error) {
+            throw new errorHandler_1.DatabaseError("Failed to bulk update services");
+        }
+    }
+    async getPopularServices(limit = 10) {
         try {
             return await database_1.db
                 .select()

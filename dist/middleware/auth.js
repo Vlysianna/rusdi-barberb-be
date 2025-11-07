@@ -55,7 +55,8 @@ const authorizeRoles = (...roles) => {
             response_1.ApiResponseUtil.unauthorized(res, "Authentication required");
             return;
         }
-        if (!roles.map((role) => role.toLowerCase()).includes(req.user.role)) {
+        const allowedRoles = roles.map((role) => role.toLowerCase());
+        if (!allowedRoles.includes(req.user.role)) {
             response_1.ApiResponseUtil.forbidden(res, "Insufficient permissions");
             return;
         }

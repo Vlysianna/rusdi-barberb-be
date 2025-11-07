@@ -121,6 +121,23 @@ export declare const services: import("drizzle-orm/mysql-core").MySqlTableWithCo
             identity: undefined;
             generated: undefined;
         }, {}, {}>;
+        isPopular: import("drizzle-orm/mysql-core").MySqlColumn<{
+            name: "is_popular";
+            tableName: "services";
+            dataType: "boolean";
+            columnType: "MySqlBoolean";
+            data: boolean;
+            driverParam: number | boolean;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
         image: import("drizzle-orm/mysql-core").MySqlColumn<{
             name: "image";
             tableName: "services";

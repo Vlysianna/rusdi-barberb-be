@@ -1,4 +1,4 @@
-import { eq, and, desc, count, gte, lte, between } from "drizzle-orm";
+import { eq, and, desc, count, gte, lte, between, sql, sum } from "drizzle-orm";
 import { db } from "../config/database";
 import { payments, type Payment, type NewPayment } from "../models/payment";
 import { bookings } from "../models/booking";
@@ -427,29 +427,51 @@ class PaymentService {
         whereConditions.push(lte(payments.createdAt, endDate));
       }
 
-      // Total payments by status
-      const statusStats = await db
-        .select({
-          status: payments.status,
-          count: count(),
-        })
-        .from(payments)
-        .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
-        .groupBy(payments.status);
+      // Get all stats in parallel
+      const [statusStats, methodStats, revenueStats] = await Promise.all([
+        // Total payments by status
+        db
+          .select({
+            status: payments.status,
+            count: count(),
+          })
+          .from(payments)
+          .where(
+            whereConditions.length > 0 ? and(...whereConditions) : undefined,
+          )
+          .groupBy(payments.status),
 
-      // Payment methods breakdown
-      const methodStats = await db
-        .select({
-          method: payments.method,
-          count: count(),
-        })
-        .from(payments)
-        .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
-        .groupBy(payments.method);
+        // Payment methods breakdown
+        db
+          .select({
+            method: payments.method,
+            count: count(),
+          })
+          .from(payments)
+          .where(
+            whereConditions.length > 0 ? and(...whereConditions) : undefined,
+          )
+          .groupBy(payments.method),
+
+        // Total revenue from paid payments
+        db
+          .select({
+            totalRevenue: sql<number>`COALESCE(SUM(CAST(${payments.amount} AS DECIMAL(10,2))), 0)`,
+            paidCount: count(),
+          })
+          .from(payments)
+          .where(
+            whereConditions.length > 0
+              ? and(eq(payments.status, PaymentStatus.PAID), ...whereConditions)
+              : eq(payments.status, PaymentStatus.PAID),
+          ),
+      ]);
 
       return {
         statusBreakdown: statusStats,
         methodBreakdown: methodStats,
+        totalRevenue: revenueStats[0]?.totalRevenue || 0,
+        paidPaymentsCount: revenueStats[0]?.paidCount || 0,
       };
     } catch (error) {
       throw new DatabaseError(`Failed to get payment statistics: ${error}`);

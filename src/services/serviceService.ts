@@ -1,4 +1,15 @@
-import { eq, like, and, or, count, desc, asc, gte, lte } from "drizzle-orm";
+import {
+  eq,
+  like,
+  and,
+  or,
+  count,
+  desc,
+  asc,
+  gte,
+  lte,
+  sql,
+} from "drizzle-orm";
 import { db } from "../config/database";
 import { services, type Service, type NewService } from "../models/service";
 import {
@@ -320,15 +331,33 @@ class ServiceService {
   }
 
   /**
+   * Get active services only
+   */
+  async getActiveServices(): Promise<Service[]> {
+    try {
+      return await db
+        .select()
+        .from(services)
+        .where(eq(services.isActive, true))
+        .orderBy(asc(services.name));
+    } catch (error) {
+      throw new DatabaseError("Failed to fetch active services");
+    }
+  }
+
+  /**
    * Get services by category
    */
-  async getServicesByCategory(category: ServiceCategory): Promise<Service[]> {
+  async getServicesByCategory(category: string): Promise<Service[]> {
     try {
       return await db
         .select()
         .from(services)
         .where(
-          and(eq(services.category, category), eq(services.isActive, true)),
+          and(
+            eq(services.category, category as any),
+            eq(services.isActive, true),
+          ),
         )
         .orderBy(asc(services.name));
     } catch (error) {
@@ -416,8 +445,8 @@ class ServiceService {
         totalServices: totalResult.count,
         activeServices: activeResult.count,
         servicesByCategory,
-        averagePrice: Math.round(averagePrice * 100) / 100, // Round to 2 decimal places
-        averageDuration: Math.round(averageDuration),
+        averagePrice,
+        averageDuration,
       };
     } catch (error) {
       throw new DatabaseError("Failed to get service statistics");
@@ -425,9 +454,272 @@ class ServiceService {
   }
 
   /**
-   * Get popular services (most booked)
+   * Get service categories
    */
-  async getPopularServices(limit: number = 5): Promise<Service[]> {
+  async getServiceCategories(): Promise<
+    { value: string; label: string; count: number }[]
+  > {
+    try {
+      const categoryStats = await db
+        .select({
+          category: services.category,
+          count: count(),
+        })
+        .from(services)
+        .where(eq(services.isActive, true))
+        .groupBy(services.category);
+
+      return categoryStats.map((stat) => ({
+        value: stat.category,
+        label: stat.category.charAt(0).toUpperCase() + stat.category.slice(1),
+        count: stat.count,
+      }));
+    } catch (error) {
+      throw new DatabaseError("Failed to get service categories");
+    }
+  }
+
+  /**
+   * Update service status
+   */
+  async updateServiceStatus(id: string, isActive: boolean): Promise<Service> {
+    try {
+      await this.getServiceById(id); // Check if exists
+
+      await db
+        .update(services)
+        .set({
+          isActive,
+          updatedAt: new Date(),
+        })
+        .where(eq(services.id, id));
+
+      return await this.getServiceById(id);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      throw new DatabaseError("Failed to update service status");
+    }
+  }
+
+  /**
+   * Toggle service popularity
+   */
+  async toggleServicePopularity(id: string): Promise<Service> {
+    try {
+      const service = await this.getServiceById(id);
+
+      await db
+        .update(services)
+        .set({
+          isPopular: !service.isPopular,
+          updatedAt: new Date(),
+        })
+        .where(eq(services.id, id));
+
+      return await this.getServiceById(id);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      throw new DatabaseError("Failed to toggle service popularity");
+    }
+  }
+
+  /**
+   * Get service analytics
+   */
+  async getServiceAnalytics(
+    id: string,
+    dateFrom?: string,
+    dateTo?: string,
+  ): Promise<any> {
+    try {
+      await this.getServiceById(id); // Check if exists
+
+      // Mock analytics data for now
+      return {
+        totalBookings: 0,
+        totalRevenue: "0.00",
+        averageRating: 0,
+        popularityRank: 1,
+        monthlyStats: [],
+        customerSatisfaction: [],
+      };
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      throw new DatabaseError("Failed to get service analytics");
+    }
+  }
+
+  /**
+   * Get service availability
+   */
+  async getServiceAvailability(
+    id: string,
+    date: string,
+    time: string,
+  ): Promise<any> {
+    try {
+      await this.getServiceById(id); // Check if exists
+
+      // Mock availability data for now
+      return {
+        isAvailable: true,
+        availableStylists: [],
+        nextAvailableSlot: null,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      throw new DatabaseError("Failed to check service availability");
+    }
+  }
+
+  /**
+   * Get recommended services
+   */
+  async getRecommendedServices(customerId?: string): Promise<Service[]> {
+    try {
+      // For now, return popular services as recommendations
+      return await db
+        .select()
+        .from(services)
+        .where(and(eq(services.isActive, true), eq(services.isPopular, true)))
+        .orderBy(desc(services.createdAt))
+        .limit(5);
+    } catch (error) {
+      throw new DatabaseError("Failed to get recommended services");
+    }
+  }
+
+  /**
+   * Export services data
+   */
+  async exportServices(format: "csv" | "excel" = "csv"): Promise<string> {
+    try {
+      const allServices = await db.select().from(services);
+
+      if (format === "csv") {
+        const headers =
+          "ID,Name,Description,Price,Duration,Category,Active,Popular\n";
+        const rows = allServices
+          .map(
+            (service) =>
+              `${service.id},"${service.name}","${service.description}",${service.price},${service.duration},${service.category},${service.isActive},${service.isPopular || false}`,
+          )
+          .join("\n");
+        return headers + rows;
+      }
+
+      // For Excel, return JSON for now (would need xlsx library)
+      return JSON.stringify(allServices, null, 2);
+    } catch (error) {
+      throw new DatabaseError("Failed to export services");
+    }
+  }
+
+  /**
+   * Get services by stylist
+   */
+  async getServicesByStylist(stylistId: string): Promise<Service[]> {
+    try {
+      // Mock implementation - would need stylist_services junction table
+      return await this.getActiveServices();
+    } catch (error) {
+      throw new DatabaseError("Failed to get services by stylist");
+    }
+  }
+
+  /**
+   * Get service reviews
+   */
+  async getServiceReviews(
+    id: string,
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<any> {
+    try {
+      await this.getServiceById(id); // Check if exists
+
+      // Mock reviews data for now
+      return {
+        reviews: [],
+        total: 0,
+        averageRating: 0,
+        ratingDistribution: [],
+      };
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      throw new DatabaseError("Failed to get service reviews");
+    }
+  }
+
+  /**
+   * Get service pricing history
+   */
+  async getServicePricingHistory(id: string): Promise<any> {
+    try {
+      const service = await this.getServiceById(id);
+
+      // Mock pricing history for now
+      return {
+        priceHistory: [
+          {
+            price: service.price,
+            effectiveDate: service.createdAt,
+            changedBy: "System",
+          },
+        ],
+        currentPrice: service.price,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      throw new DatabaseError("Failed to get service pricing history");
+    }
+  }
+
+  /**
+   * Bulk update services
+   */
+  async bulkUpdateServices(
+    serviceIds: string[],
+    updates: Partial<any>,
+  ): Promise<Service[]> {
+    try {
+      await db
+        .update(services)
+        .set({
+          ...updates,
+          updatedAt: new Date(),
+        })
+        .where(
+          sql`${services.id} IN (${serviceIds.map((id) => `'${id}'`).join(",")})`,
+        );
+
+      return await db
+        .select()
+        .from(services)
+        .where(
+          sql`${services.id} IN (${serviceIds.map((id) => `'${id}'`).join(",")})`,
+        );
+    } catch (error) {
+      throw new DatabaseError("Failed to bulk update services");
+    }
+  }
+
+  /**
+   * Get popular services
+   */
+  async getPopularServices(limit: number = 10): Promise<Service[]> {
     try {
       // For now, return most recently created services
       // In a real implementation, you'd join with bookings table to get actual popularity

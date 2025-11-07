@@ -106,6 +106,57 @@ export declare const stylists: import("drizzle-orm/mysql-core").MySqlTableWithCo
             identity: undefined;
             generated: undefined;
         }, {}, {}>;
+        totalBookings: import("drizzle-orm/mysql-core").MySqlColumn<{
+            name: "total_bookings";
+            tableName: "stylists";
+            dataType: "number";
+            columnType: "MySqlInt";
+            data: number;
+            driverParam: string | number;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        revenue: import("drizzle-orm/mysql-core").MySqlColumn<{
+            name: "revenue";
+            tableName: "stylists";
+            dataType: "string";
+            columnType: "MySqlDecimal";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        commissionRate: import("drizzle-orm/mysql-core").MySqlColumn<{
+            name: "commission_rate";
+            tableName: "stylists";
+            dataType: "string";
+            columnType: "MySqlDecimal";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
         isAvailable: import("drizzle-orm/mysql-core").MySqlColumn<{
             name: "is_available";
             tableName: "stylists";
@@ -123,6 +174,37 @@ export declare const stylists: import("drizzle-orm/mysql-core").MySqlTableWithCo
             identity: undefined;
             generated: undefined;
         }, {}, {}>;
+        schedule: import("drizzle-orm/mysql-core").MySqlColumn<{
+            name: "schedule";
+            tableName: "stylists";
+            dataType: "json";
+            columnType: "MySqlJson";
+            data: {
+                [key: string]: {
+                    isWorking: boolean;
+                    startTime: string;
+                    endTime: string;
+                };
+            };
+            driverParam: string;
+            notNull: false;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {
+            $type: {
+                [key: string]: {
+                    isWorking: boolean;
+                    startTime: string;
+                    endTime: string;
+                };
+            };
+        }>;
         bio: import("drizzle-orm/mysql-core").MySqlColumn<{
             name: "bio";
             tableName: "stylists";
@@ -339,6 +421,81 @@ export declare const stylistSchedules: import("drizzle-orm/mysql-core").MySqlTab
     };
     dialect: "mysql";
 }>;
+export declare const stylistServices: import("drizzle-orm/mysql-core").MySqlTableWithColumns<{
+    name: "stylist_services";
+    schema: undefined;
+    columns: {
+        id: import("drizzle-orm/mysql-core").MySqlColumn<{
+            name: "id";
+            tableName: "stylist_services";
+            dataType: "string";
+            columnType: "MySqlVarChar";
+            data: string;
+            driverParam: string | number;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: true;
+            isAutoincrement: false;
+            hasRuntimeDefault: true;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        stylistId: import("drizzle-orm/mysql-core").MySqlColumn<{
+            name: "stylist_id";
+            tableName: "stylist_services";
+            dataType: "string";
+            columnType: "MySqlVarChar";
+            data: string;
+            driverParam: string | number;
+            notNull: true;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        serviceId: import("drizzle-orm/mysql-core").MySqlColumn<{
+            name: "service_id";
+            tableName: "stylist_services";
+            dataType: "string";
+            columnType: "MySqlVarChar";
+            data: string;
+            driverParam: string | number;
+            notNull: true;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        createdAt: import("drizzle-orm/mysql-core").MySqlColumn<{
+            name: "created_at";
+            tableName: "stylist_services";
+            dataType: "date";
+            columnType: "MySqlTimestamp";
+            data: Date;
+            driverParam: string | number;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+    };
+    dialect: "mysql";
+}>;
 export declare const stylistLeaves: import("drizzle-orm/mysql-core").MySqlTableWithColumns<{
     name: "stylist_leaves";
     schema: undefined;
@@ -520,6 +677,8 @@ export type Stylist = typeof stylists.$inferSelect;
 export type NewStylist = typeof stylists.$inferInsert;
 export type StylistSchedule = typeof stylistSchedules.$inferSelect;
 export type NewStylistSchedule = typeof stylistSchedules.$inferInsert;
+export type StylistService = typeof stylistServices.$inferSelect;
+export type NewStylistService = typeof stylistServices.$inferInsert;
 export type StylistLeave = typeof stylistLeaves.$inferSelect;
 export type NewStylistLeave = typeof stylistLeaves.$inferInsert;
 //# sourceMappingURL=stylist.d.ts.map

@@ -1,42 +1,35 @@
 // Export all database schemas
-export * from './user';
-export * from './stylist';
-export * from './service';
-export * from './booking';
-export * from './payment';
-export * from './review';
+export * from "./user";
+export * from "./stylist";
+export * from "./service";
+export * from "./booking";
+export * from "./payment";
+export * from "./review";
 
 // Import all tables for migrations
-import { users } from './user';
+import { users } from "./user";
 import {
   stylists,
   stylistSchedules,
-  stylistLeaves
-} from './stylist';
-import {
-  services,
-  serviceCategories,
-  serviceAddons
-} from './service';
-import {
-  bookings,
-  bookingAddons,
-  bookingHistory
-} from './booking';
+  stylistServices,
+  stylistLeaves,
+} from "./stylist";
+import { services, serviceCategories, serviceAddons } from "./service";
+import { bookings, bookingAddons, bookingHistory } from "./booking";
 import {
   payments,
   paymentMethods,
   paymentHistory,
-  paymentWebhooks
-} from './payment';
+  paymentWebhooks,
+} from "./payment";
 import {
   reviews,
   reviewReactions,
   reviewReports,
   notifications,
   notificationTemplates,
-  notificationPreferences
-} from './review';
+  notificationPreferences,
+} from "./review";
 
 // Export schema object for Drizzle Kit migrations
 export const schema = {
@@ -46,6 +39,7 @@ export const schema = {
   // Stylist tables
   stylists,
   stylistSchedules,
+  stylistServices,
   stylistLeaves,
 
   // Service tables
@@ -78,6 +72,7 @@ export const tables = {
   users,
   stylists,
   stylistSchedules,
+  stylistServices,
   stylistLeaves,
   services,
   serviceCategories,

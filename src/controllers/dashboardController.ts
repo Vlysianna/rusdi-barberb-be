@@ -5,6 +5,7 @@ import { ApiResponseUtil } from "../utils/response";
 import userService from "../services/userService";
 import bookingService from "../services/bookingService";
 import paymentService from "../services/paymentService";
+import reviewService from "../services/reviewService";
 
 class DashboardController {
   /**
@@ -26,48 +27,102 @@ class DashboardController {
       }
 
       // Get all statistics in parallel
-      const [userStats, bookingStats, paymentStats] = await Promise.all([
-        userService.getUserStats(),
-        bookingService.getBookingStats(),
-        paymentService.getPaymentStats(startDate, endDate),
-      ]);
+      const [userStats, bookingStats, paymentStats, reviewStats] =
+        await Promise.all([
+          userService.getUserStats(),
+          bookingService.getBookingStats(),
+          paymentService.getPaymentStats(startDate, endDate),
+          reviewService.getReviewStats(),
+        ]);
 
+      // Transform to match frontend DashboardStats interface
       const dashboardStats = {
-        overview: {
-          totalUsers: userStats.totalUsers,
-          activeUsers: userStats.activeUsers,
-          totalBookings: bookingStats.totalBookings,
-          todayBookings: bookingStats.todayBookings,
-          thisWeekBookings: bookingStats.thisWeekBookings,
-          thisMonthBookings: bookingStats.thisMonthBookings,
-          averageBookingValue: bookingStats.averageBookingValue,
-        },
-        users: {
-          totalUsers: userStats.totalUsers,
-          activeUsers: userStats.activeUsers,
-          usersByRole: userStats.usersByRole,
-          newUsersThisMonth: userStats.newUsersThisMonth,
-          newUsersToday: userStats.newUsersToday,
-          verifiedUsers: userStats.verifiedUsers,
-        },
-        bookings: {
-          totalBookings: bookingStats.totalBookings,
-          pendingBookings: bookingStats.pendingBookings,
-          confirmedBookings: bookingStats.confirmedBookings,
-          completedBookings: bookingStats.completedBookings,
-          cancelledBookings: bookingStats.cancelledBookings,
-          todayBookings: bookingStats.todayBookings,
-          thisWeekBookings: bookingStats.thisWeekBookings,
-          thisMonthBookings: bookingStats.thisMonthBookings,
-          popularServices: bookingStats.popularServices,
-        },
-        payments: {
-          statusBreakdown: paymentStats.statusBreakdown,
-          methodBreakdown: paymentStats.methodBreakdown,
-        },
-        dateRange: {
-          from: dateFrom ? new Date(dateFrom as string).toISOString() : null,
-          to: dateTo ? new Date(dateTo as string).toISOString() : null,
+        totalCustomers: userStats.totalUsers || 0,
+        totalBookings: bookingStats.totalBookings || 0,
+        totalRevenue: paymentStats.totalRevenue?.toString() || "0",
+        averageRating: reviewStats.averageRating || 0,
+        todayBookings: bookingStats.todayBookings || 0,
+        monthlyBookings: bookingStats.thisMonthBookings || 0,
+        pendingBookings: bookingStats.pendingBookings || 0,
+        completedBookings: bookingStats.completedBookings || 0,
+        cancelledBookings: bookingStats.cancelledBookings || 0,
+        topStylists: [], // Will be populated by additional service calls
+        recentBookings: [], // Will be populated by additional service calls
+        monthlyRevenue: [], // Will be populated by additional service calls
+        bookingsByStatus: [
+          {
+            status: "pending",
+            count: bookingStats.pendingBookings || 0,
+            percentage:
+              bookingStats.totalBookings > 0
+                ? ((bookingStats.pendingBookings || 0) /
+                    bookingStats.totalBookings) *
+                  100
+                : 0,
+          },
+          {
+            status: "confirmed",
+            count: bookingStats.confirmedBookings || 0,
+            percentage:
+              bookingStats.totalBookings > 0
+                ? ((bookingStats.confirmedBookings || 0) /
+                    bookingStats.totalBookings) *
+                  100
+                : 0,
+          },
+          {
+            status: "completed",
+            count: bookingStats.completedBookings || 0,
+            percentage:
+              bookingStats.totalBookings > 0
+                ? ((bookingStats.completedBookings || 0) /
+                    bookingStats.totalBookings) *
+                  100
+                : 0,
+          },
+          {
+            status: "cancelled",
+            count: bookingStats.cancelledBookings || 0,
+            percentage:
+              bookingStats.totalBookings > 0
+                ? ((bookingStats.cancelledBookings || 0) /
+                    bookingStats.totalBookings) *
+                  100
+                : 0,
+          },
+        ],
+        // Additional nested data for backward compatibility
+        _detailed: {
+          users: {
+            totalUsers: userStats.totalUsers,
+            activeUsers: userStats.activeUsers,
+            usersByRole: userStats.usersByRole,
+            newUsersThisMonth: userStats.newUsersThisMonth,
+            newUsersToday: userStats.newUsersToday,
+            verifiedUsers: userStats.verifiedUsers,
+          },
+          bookings: {
+            totalBookings: bookingStats.totalBookings,
+            pendingBookings: bookingStats.pendingBookings,
+            confirmedBookings: bookingStats.confirmedBookings,
+            completedBookings: bookingStats.completedBookings,
+            cancelledBookings: bookingStats.cancelledBookings,
+            todayBookings: bookingStats.todayBookings,
+            thisWeekBookings: bookingStats.thisWeekBookings,
+            thisMonthBookings: bookingStats.thisMonthBookings,
+            popularServices: bookingStats.popularServices,
+            averageBookingValue: bookingStats.averageBookingValue,
+          },
+          payments: {
+            statusBreakdown: paymentStats.statusBreakdown,
+            methodBreakdown: paymentStats.methodBreakdown,
+            totalRevenue: paymentStats.totalRevenue,
+          },
+          reviews: reviewStats,
+          dateRange: {
+            from: dateFrom ? new Date(dateFrom as string).toISOString() : null,
+            to: dateTo ? new Date(dateTo as string).toISOString() : null,
+          },
         },
       };
 

@@ -15,6 +15,13 @@
       "when": 1761570910511,
       "tag": "0001_motionless_namor",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1761721258416,
+      "tag": "0002_perfect_lionheart",
+      "breakpoints": true
     }
   ]
 }

@@ -77,7 +77,8 @@ export const authorizeRoles = (...roles: UserRole[]) => {
       return;
     }
 
-    if (!roles.map((role) => role.toLowerCase()).includes(req.user.role)) {
+    const allowedRoles = roles.map((role) => role.toLowerCase());
+    if (!allowedRoles.includes(req.user.role)) {
       ApiResponseUtil.forbidden(res, "Insufficient permissions");
       return;
     }

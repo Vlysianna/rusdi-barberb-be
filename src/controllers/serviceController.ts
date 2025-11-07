@@ -9,7 +9,7 @@ class ServiceController {
   /**
    * Get all services with pagination and filters
    */
-  getServices = asyncHandler(
+  getAllServices = asyncHandler(
     async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
       const {
         page = 1,
@@ -36,10 +36,13 @@ class ServiceController {
         maxPrice: maxPrice ? Number(maxPrice) : undefined,
       });
 
-      return ApiResponseUtil.success(
+      return ApiResponseUtil.paginated(
         res,
+        result.services,
+        result.total,
+        Number(page),
+        Number(limit),
         "Services retrieved successfully",
-        result,
       );
     },
   );
@@ -51,15 +54,7 @@ class ServiceController {
     async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
       const { id } = req.params;
 
-      if (!id) {
-        return ApiResponseUtil.badRequest(res, "Service ID is required");
-      }
-
       const service = await serviceService.getServiceById(id);
-
-      if (!service) {
-        return ApiResponseUtil.notFound(res, "Service not found");
-      }
 
       return ApiResponseUtil.success(
         res,
@@ -70,7 +65,7 @@ class ServiceController {
   );
 
   /**
-   * Create new service (Admin/Stylist)
+   * Create new service (Admin/Manager only)
    */
   createService = asyncHandler(
     async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -87,23 +82,19 @@ class ServiceController {
   );
 
   /**
-   * Update service (Admin/Stylist)
+   * Update service (Admin/Manager only)
    */
   updateService = asyncHandler(
     async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
       const { id } = req.params;
       const updateData = req.body;
 
-      if (!id) {
-        return ApiResponseUtil.badRequest(res, "Service ID is required");
-      }
+      const updatedService = await serviceService.updateService(id, updateData);
 
-      const service = await serviceService.updateService(id, updateData);
-
-      return ApiResponseUtil.updated(
+      return ApiResponseUtil.success(
         res,
-        service,
         "Service updated successfully",
+        updatedService,
       );
     },
   );
@@ -115,214 +106,23 @@ class ServiceController {
     async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
       const { id } = req.params;
 
-      if (!id) {
-        return ApiResponseUtil.badRequest(res, "Service ID is required");
-      }
-
       await serviceService.deleteService(id);
 
-      return ApiResponseUtil.deleted(res, "Service deleted successfully");
+      return ApiResponseUtil.success(res, "Service deleted successfully", null);
     },
   );
 
   /**
-   * Get all service categories
+   * Get active services only (for booking)
    */
-  getCategories = asyncHandler(
+  getActiveServices = asyncHandler(
     async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-      const {
-        page = 1,
-        limit = 20,
-        search,
-        isActive,
-        sortBy = "sortOrder",
-        sortOrder = "asc",
-      } = req.query;
-
-      // Categories functionality not implemented in serviceService yet
-      return ApiResponseUtil.success(
-        res,
-        "Categories endpoint not implemented",
-        [],
-      );
-    },
-  );
-
-  /**
-   * Create service category (Admin only)
-   */
-  createCategory = asyncHandler(
-    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-      const categoryData = req.body;
-
-      // Category creation not implemented in serviceService yet
-      return ApiResponseUtil.success(
-        res,
-        "Category creation endpoint not implemented",
-        null,
-      );
-    },
-  );
-
-  /**
-   * Update service category (Admin only)
-   */
-  updateCategory = asyncHandler(
-    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-      const { id } = req.params;
-      const updateData = req.body;
-
-      if (!id) {
-        return ApiResponseUtil.badRequest(res, "Category ID is required");
-      }
-
-      // Category update not implemented in serviceService yet
-      return ApiResponseUtil.success(
-        res,
-        "Category update endpoint not implemented",
-        null,
-      );
-    },
-  );
-
-  /**
-   * Delete service category (Admin only)
-   */
-  deleteCategory = asyncHandler(
-    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-      const { id } = req.params;
-
-      if (!id) {
-        return ApiResponseUtil.badRequest(res, "Category ID is required");
-      }
-
-      // Category deletion not implemented in serviceService yet
-      return ApiResponseUtil.success(
-        res,
-        "Category deletion endpoint not implemented",
-      );
-    },
-  );
-
-  /**
-   * Get service addons
-   */
-  getServiceAddons = asyncHandler(
-    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-      const { serviceId } = req.params;
-
-      if (!serviceId) {
-        return ApiResponseUtil.badRequest(res, "Service ID is required");
-      }
-
-      // Service addons not implemented in serviceService yet
-      return ApiResponseUtil.success(
-        res,
-        "Service addons endpoint not implemented",
-        [],
-      );
-    },
-  );
-
-  /**
-   * Create service addon (Admin/Stylist)
-   */
-  createServiceAddon = asyncHandler(
-    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-      const { serviceId } = req.params;
-      const addonData = req.body;
-
-      if (!serviceId) {
-        return ApiResponseUtil.badRequest(res, "Service ID is required");
-      }
-
-      // Service addon creation not implemented in serviceService yet
-      return ApiResponseUtil.success(
-        res,
-        "Service addon creation endpoint not implemented",
-        null,
-      );
-    },
-  );
-
-  /**
-   * Update service addon (Admin/Stylist)
-   */
-  updateServiceAddon = asyncHandler(
-    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-      const { addonId } = req.params;
-      const updateData = req.body;
-
-      if (!addonId) {
-        return ApiResponseUtil.badRequest(res, "Addon ID is required");
-      }
-
-      // Service addon update not implemented in serviceService yet
-      return ApiResponseUtil.success(
-        res,
-        "Service addon update endpoint not implemented",
-        null,
-      );
-    },
-  );
-
-  /**
-   * Delete service addon (Admin/Stylist)
-   */
-  deleteServiceAddon = asyncHandler(
-    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-      const { addonId } = req.params;
-
-      if (!addonId) {
-        return ApiResponseUtil.badRequest(res, "Addon ID is required");
-      }
-
-      // Service addon deletion not implemented in serviceService yet
-      ApiResponseUtil.success(
-        res,
-        "Service addon deletion endpoint not implemented",
-      );
-
-      return;
-    },
-  );
-
-  /**
-   * Upload service image (Admin/Stylist)
-   */
-  uploadServiceImage = asyncHandler(
-    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-      const { id } = req.params;
-      const file = req.file;
-
-      if (!id) {
-        return ApiResponseUtil.badRequest(res, "Service ID is required");
-      }
-
-      if (!file) {
-        return ApiResponseUtil.badRequest(res, "Image file is required");
-      }
-
-      // Service image upload not implemented in serviceService yet
-      return ApiResponseUtil.success(
-        res,
-        "Service image upload endpoint not implemented",
-        null,
-      );
-    },
-  );
-
-  /**
-   * Get service statistics (Admin only)
-   */
-  getServiceStats = asyncHandler(
-    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-      const stats = await serviceService.getServiceStats();
+      const services = await serviceService.getActiveServices();
 
       return ApiResponseUtil.success(
         res,
-        "Service statistics retrieved successfully",
-        stats,
+        "Active services retrieved successfully",
+        services,
       );
     },
   );
@@ -332,7 +132,7 @@ class ServiceController {
    */
   getPopularServices = asyncHandler(
     async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-      const { limit = 10, period = "month" } = req.query;
+      const { limit = 10 } = req.query;
 
       const services = await serviceService.getPopularServices(Number(limit));
 
@@ -345,59 +145,243 @@ class ServiceController {
   );
 
   /**
-   * Search services
+   * Get services by category
    */
-  searchServices = asyncHandler(
+  getServicesByCategory = asyncHandler(
     async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-      const {
-        q: query,
-        page = 1,
-        limit = 10,
-        category,
-        minPrice,
-        maxPrice,
-      } = req.query;
+      const { category } = req.params;
 
-      if (!query) {
-        return ApiResponseUtil.badRequest(res, "Search query is required");
-      }
-
-      const result = await serviceService.searchServices(
-        query as string,
-        Number(limit),
-      );
+      const services = await serviceService.getServicesByCategory(category);
 
       return ApiResponseUtil.success(
         res,
-        "Search results retrieved successfully",
-        result,
+        "Services by category retrieved successfully",
+        services,
       );
     },
   );
 
   /**
-   * Bulk update services (Admin only)
+   * Get service categories
+   */
+  getServiceCategories = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      const categories = await serviceService.getServiceCategories();
+
+      return ApiResponseUtil.success(
+        res,
+        "Service categories retrieved successfully",
+        categories,
+      );
+    },
+  );
+
+  /**
+   * Update service status
+   */
+  updateServiceStatus = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      const { id } = req.params;
+      const { isActive } = req.body;
+
+      const updatedService = await serviceService.updateServiceStatus(
+        id,
+        isActive,
+      );
+
+      return ApiResponseUtil.success(
+        res,
+        "Service status updated successfully",
+        updatedService,
+      );
+    },
+  );
+
+  /**
+   * Toggle service popularity
+   */
+  toggleServicePopularity = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      const { id } = req.params;
+
+      const updatedService = await serviceService.toggleServicePopularity(id);
+
+      return ApiResponseUtil.success(
+        res,
+        "Service popularity toggled successfully",
+        updatedService,
+      );
+    },
+  );
+
+  /**
+   * Get service analytics
+   */
+  getServiceAnalytics = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      const { id } = req.params;
+      const { dateFrom, dateTo } = req.query;
+
+      const analytics = await serviceService.getServiceAnalytics(
+        id,
+        dateFrom as string,
+        dateTo as string,
+      );
+
+      return ApiResponseUtil.success(
+        res,
+        "Service analytics retrieved successfully",
+        analytics,
+      );
+    },
+  );
+
+  /**
+   * Get service availability
+   */
+  getServiceAvailability = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      const { id } = req.params;
+      const { date, time } = req.query;
+
+      const availability = await serviceService.getServiceAvailability(
+        id,
+        date as string,
+        time as string,
+      );
+
+      return ApiResponseUtil.success(
+        res,
+        "Service availability retrieved successfully",
+        availability,
+      );
+    },
+  );
+
+  /**
+   * Get recommended services
+   */
+  getRecommendedServices = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      const { customerId } = req.query;
+
+      const services = await serviceService.getRecommendedServices(
+        customerId as string,
+      );
+
+      return ApiResponseUtil.success(
+        res,
+        "Recommended services retrieved successfully",
+        services,
+      );
+    },
+  );
+
+  /**
+   * Export services data
+   */
+  exportServices = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      const { format = "csv" } = req.query;
+
+      const data = await serviceService.exportServices(
+        format as "csv" | "excel",
+      );
+
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=services.${format}`,
+      );
+      res.setHeader(
+        "Content-Type",
+        format === "csv"
+          ? "text/csv"
+          : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      );
+
+      return res.send(data);
+    },
+  );
+
+  /**
+   * Get services for specific stylist
+   */
+  getServicesByStylist = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      const { stylistId } = req.params;
+
+      const services = await serviceService.getServicesByStylist(stylistId);
+
+      return ApiResponseUtil.success(
+        res,
+        "Services by stylist retrieved successfully",
+        services,
+      );
+    },
+  );
+
+  /**
+   * Get service reviews
+   */
+  getServiceReviews = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      const { id } = req.params;
+      const { page = 1, limit = 20 } = req.query;
+
+      const result = await serviceService.getServiceReviews(
+        id,
+        Number(page),
+        Number(limit),
+      );
+
+      return ApiResponseUtil.paginated(
+        res,
+        result.reviews,
+        result.total,
+        Number(page),
+        Number(limit),
+        "Service reviews retrieved successfully",
+      );
+    },
+  );
+
+  /**
+   * Get service pricing history
+   */
+  getServicePricingHistory = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      const { id } = req.params;
+
+      const history = await serviceService.getServicePricingHistory(id);
+
+      return ApiResponseUtil.success(
+        res,
+        "Service pricing history retrieved successfully",
+        history,
+      );
+    },
+  );
+
+  /**
+   * Bulk update services
    */
   bulkUpdateServices = asyncHandler(
     async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-      const { serviceIds, updateData } = req.body;
+      const { serviceIds, updates } = req.body;
 
-      if (
-        !serviceIds ||
-        !Array.isArray(serviceIds) ||
-        serviceIds.length === 0
-      ) {
-        return ApiResponseUtil.badRequest(res, "Service IDs array is required");
-      }
+      const updatedServices = await serviceService.bulkUpdateServices(
+        serviceIds,
+        updates,
+      );
 
-      // Bulk update not implemented in serviceService yet
       return ApiResponseUtil.success(
         res,
-        "Bulk update endpoint not implemented",
-        null,
+        "Services updated successfully",
+        updatedServices,
       );
     },
   );
 }
 
-export default new ServiceController();
+export const serviceController = new ServiceController();
+export default serviceController;

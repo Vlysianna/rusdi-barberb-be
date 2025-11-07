@@ -44,9 +44,25 @@ declare class ServiceService {
     }): Promise<Service>;
     deleteService(id: string): Promise<void>;
     toggleServiceStatus(id: string): Promise<Service>;
-    getServicesByCategory(category: ServiceCategory): Promise<Service[]>;
+    getActiveServices(): Promise<Service[]>;
+    getServicesByCategory(category: string): Promise<Service[]>;
     searchServices(query: string, limit?: number): Promise<Service[]>;
     getServiceStats(): Promise<ServiceStats>;
+    getServiceCategories(): Promise<{
+        value: string;
+        label: string;
+        count: number;
+    }[]>;
+    updateServiceStatus(id: string, isActive: boolean): Promise<Service>;
+    toggleServicePopularity(id: string): Promise<Service>;
+    getServiceAnalytics(id: string, dateFrom?: string, dateTo?: string): Promise<any>;
+    getServiceAvailability(id: string, date: string, time: string): Promise<any>;
+    getRecommendedServices(customerId?: string): Promise<Service[]>;
+    exportServices(format?: "csv" | "excel"): Promise<string>;
+    getServicesByStylist(stylistId: string): Promise<Service[]>;
+    getServiceReviews(id: string, page?: number, limit?: number): Promise<any>;
+    getServicePricingHistory(id: string): Promise<any>;
+    bulkUpdateServices(serviceIds: string[], updates: Partial<any>): Promise<Service[]>;
     getPopularServices(limit?: number): Promise<Service[]>;
 }
 declare const _default: ServiceService;

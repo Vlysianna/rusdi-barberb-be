@@ -50,6 +50,8 @@ declare class PaymentService {
             method: "cash" | "credit_card" | "debit_card" | "digital_wallet" | "bank_transfer";
             count: number;
         }[];
+        totalRevenue: number;
+        paidPaymentsCount: number;
     }>;
     private processPaymentGateway;
     private processRefundGateway;

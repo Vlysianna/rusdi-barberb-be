@@ -11,6 +11,8 @@ import {
 // Import routes
 import authRoutes from "./routes/auth";
 import userRoutes from "./routes/users";
+import stylistRoutes from "./routes/stylists";
+import serviceRoutes from "./routes/services";
 import bookingRoutes from "./routes/bookings";
 import paymentRoutes from "./routes/payments";
 import dashboardRoutes from "./routes/dashboard";
@@ -132,6 +134,12 @@ class App {
     // User routes
     this.app.use(`${apiPrefix}/users`, userRoutes);
 
+    // Stylist routes
+    this.app.use(`${apiPrefix}/stylists`, stylistRoutes);
+
+    // Service routes
+    this.app.use(`${apiPrefix}/services`, serviceRoutes);
+
     // Booking routes
     this.app.use(`${apiPrefix}/bookings`, bookingRoutes);
 
@@ -142,8 +150,6 @@ class App {
     this.app.use(`${apiPrefix}/dashboard`, dashboardRoutes);
 
     // TODO: Add other routes here as they are created
-    // this.app.use(`${apiPrefix}/stylists`, stylistRoutes);
-    // this.app.use(`${apiPrefix}/services`, serviceRoutes);
     // this.app.use(`${apiPrefix}/reviews`, reviewRoutes);
     // this.app.use(`${apiPrefix}/notifications`, notificationRoutes);
   }
