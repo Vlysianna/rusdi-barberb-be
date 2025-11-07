@@ -198,6 +198,10 @@ class BookingService {
           customer: { id: "", fullName: "Unknown", email: "", phone: "" },
           stylist: {
             id: "",
+            user: {
+              fullName: "Unknown",
+              email: "",
+            },
             specialties: [],
             rating: 0,
           },
@@ -230,7 +234,7 @@ class BookingService {
    */
   async getBookingById(bookingId: string): Promise<BookingWithDetails | null> {
     try {
-      const stylishUser = users.as("stylishUser");
+      const stylistUser = users;
 
       const [result] = await db
         .select({
@@ -242,16 +246,11 @@ class BookingService {
             phone: users.phone,
           },
           stylist: stylists,
-          stylistUser: {
-            fullName: stylishUser.fullName,
-            email: stylishUser.email,
-          },
           service: services,
         })
         .from(bookings)
         .leftJoin(users, eq(bookings.customerId, users.id))
         .leftJoin(stylists, eq(bookings.stylistId, stylists.id))
-        .leftJoin(stylishUser, eq(stylists.userId, stylishUser.id))
         .leftJoin(services, eq(bookings.serviceId, services.id))
         .where(eq(bookings.id, bookingId))
         .limit(1);
@@ -260,12 +259,29 @@ class BookingService {
         return null;
       }
 
+      // Get stylist user details separately
+      let stylistUserDetails = { fullName: "", email: "" };
+      if (result.stylist?.userId) {
+        const [stylistUserResult] = await db
+          .select({
+            fullName: users.fullName,
+            email: users.email,
+          })
+          .from(users)
+          .where(eq(users.id, result.stylist.userId))
+          .limit(1);
+
+        if (stylistUserResult) {
+          stylistUserDetails = stylistUserResult;
+        }
+      }
+
       return {
         ...result.booking,
         customer: result.customer,
         stylist: {
           id: result.stylist?.id || "",
-          user: result.stylistUser,
+          user: stylistUserDetails,
           specialties: result.stylist?.specialties || [],
           rating: parseFloat(result.stylist?.rating || "0"),
         },
