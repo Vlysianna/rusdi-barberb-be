@@ -2,9 +2,9 @@ import { Router } from "express";
 import paymentController from "../controllers/paymentController";
 import {
   authenticateToken,
-  adminOnly,
-  stylistOrAdmin,
-  customerResourceAccess,
+  checkPermission,
+  checkResourceOwnership,
+  restrictTo,
 } from "../middleware/auth";
 import {
   validateBody,
@@ -112,7 +112,7 @@ router.get(
 router.post(
   "/:id/refund",
   authenticateToken,
-  stylistOrAdmin,
+  checkPermission('payments', 'update'),
   validateId,
   validateBody(
     Joi.object({
@@ -133,7 +133,7 @@ router.post(
 router.get(
   "/stats",
   authenticateToken,
-  adminOnly,
+  checkPermission('reports', 'read'),
   paymentController.getPaymentStats,
 );
 
@@ -157,7 +157,7 @@ router.get(
         .optional(),
     }),
   ),
-  customerResourceAccess("customerId"),
+  checkResourceOwnership('customer'),
   paymentController.getCustomerPaymentHistory,
 );
 

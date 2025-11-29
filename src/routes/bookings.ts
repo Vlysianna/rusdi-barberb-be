@@ -2,9 +2,9 @@ import { Router } from "express";
 import bookingController from "../controllers/bookingController";
 import {
   authenticateToken,
-  adminOnly,
-  stylistOrAdmin,
-  bookingAccess,
+  checkPermission,
+  checkResourceOwnership,
+  restrictTo,
 } from "../middleware/auth";
 import {
   validateBody,
@@ -26,7 +26,6 @@ const router = Router();
 router.get(
   "/",
   authenticateToken,
-  bookingAccess(),
   validateQuery(
     queryValidation.pagination.keys({
       customerId: Joi.string().optional(),
@@ -79,7 +78,7 @@ router.get(
   "/:id",
   authenticateToken,
   validateId,
-  bookingAccess(),
+  checkResourceOwnership('booking'),
   bookingController.getBookingById,
 );
 
@@ -88,7 +87,7 @@ router.put(
   "/:id",
   authenticateToken,
   validateId,
-  bookingAccess(),
+  checkResourceOwnership('booking'),
   validateBody(bookingValidation.update),
   bookingController.updateBooking,
 );
@@ -98,7 +97,7 @@ router.put(
   "/:id/reschedule",
   authenticateToken,
   validateId,
-  bookingAccess(),
+  checkResourceOwnership('booking'),
   validateBody(
     Joi.object({
       appointmentDate: Joi.date().iso().min("now").required().messages({
@@ -126,7 +125,7 @@ router.put(
   "/:id/cancel",
   authenticateToken,
   validateId,
-  bookingAccess(),
+  checkResourceOwnership('booking'),
   validateBody(
     Joi.object({
       reason: Joi.string().min(5).max(500).required().messages({
@@ -147,7 +146,7 @@ router.put(
 router.put(
   "/:id/confirm",
   authenticateToken,
-  stylistOrAdmin,
+  checkPermission('bookings', 'update'),
   validateId,
   bookingController.confirmBooking,
 );
@@ -156,7 +155,7 @@ router.put(
 router.put(
   "/:id/start",
   authenticateToken,
-  stylistOrAdmin,
+  checkPermission('bookings', 'update'),
   validateId,
   bookingController.startBooking,
 );
@@ -165,7 +164,7 @@ router.put(
 router.put(
   "/:id/complete",
   authenticateToken,
-  stylistOrAdmin,
+  checkPermission('bookings', 'update'),
   validateId,
   bookingController.completeBooking,
 );
@@ -174,7 +173,7 @@ router.put(
 router.put(
   "/:id/no-show",
   authenticateToken,
-  stylistOrAdmin,
+  checkPermission('bookings', 'update'),
   validateId,
   validateBody(
     Joi.object({
@@ -194,7 +193,7 @@ router.put(
 router.get(
   "/stats",
   authenticateToken,
-  adminOnly,
+  checkPermission('reports', 'read'),
   bookingController.getBookingStats,
 );
 
@@ -229,7 +228,7 @@ router.get(
 router.get(
   "/stylist/:stylistId/schedule",
   authenticateToken,
-  stylistOrAdmin,
+  checkResourceOwnership('stylist'),
   validateParams(
     Joi.object({
       stylistId: Joi.string().required(),

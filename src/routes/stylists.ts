@@ -2,10 +2,9 @@ import { Router } from "express";
 import { stylistController } from "../controllers/stylistController";
 import {
   authenticateToken,
-  adminOnly,
-  managerOrAdmin,
-  stylistOrAdmin,
-  resourceOwnerOrAdmin,
+  checkPermission,
+  checkResourceOwnership,
+  restrictTo,
 } from "../middleware/auth";
 import {
   validateBody,
@@ -196,7 +195,7 @@ router.get(
 router.post(
   "/",
   authenticateToken,
-  managerOrAdmin,
+  checkPermission('stylists', 'create'),
   validateBody(createStylistSchema),
   stylistController.createStylist,
 );
@@ -242,6 +241,7 @@ router.get(
 router.put(
   "/:id",
   authenticateToken,
+  checkResourceOwnership('stylist'),
   validateId,
   validateBody(updateStylistSchema),
   stylistController.updateStylist,
@@ -251,7 +251,7 @@ router.put(
 router.delete(
   "/:id",
   authenticateToken,
-  adminOnly,
+  checkPermission('stylists', 'delete'),
   validateId,
   stylistController.deleteStylist,
 );
@@ -260,6 +260,7 @@ router.delete(
 router.patch(
   "/:id/availability",
   authenticateToken,
+  checkResourceOwnership('stylist'),
   validateId,
   validateBody(
     Joi.object({
@@ -275,6 +276,7 @@ router.patch(
 router.patch(
   "/:id/schedule",
   authenticateToken,
+  checkResourceOwnership('stylist'),
   validateId,
   validateBody(
     Joi.object({
@@ -382,7 +384,7 @@ router.get(
 router.get(
   "/:id/performance",
   authenticateToken,
-  managerOrAdmin,
+  checkPermission('reports', 'read'),
   validateId,
   validateQuery(
     Joi.object({
@@ -397,6 +399,7 @@ router.get(
 router.get(
   "/:id/earnings",
   authenticateToken,
+  checkResourceOwnership('stylist'),
   validateId,
   validateQuery(
     Joi.object({
@@ -425,7 +428,7 @@ router.get(
 router.post(
   "/:id/services",
   authenticateToken,
-  managerOrAdmin,
+  checkPermission('stylists', 'update'),
   validateId,
   validateBody(
     Joi.object({
@@ -442,7 +445,7 @@ router.post(
 router.delete(
   "/:id/services/:serviceId",
   authenticateToken,
-  managerOrAdmin,
+  checkPermission('stylists', 'update'),
   validateParams(
     Joi.object({
       id: Joi.string().required(),

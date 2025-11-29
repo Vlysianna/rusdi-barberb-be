@@ -5,12 +5,15 @@ export interface JWTPayload {
   userId: string;
   email: string;
   role: "admin" | "manager" | "stylist" | "customer";
+  stylistId?: string;
+  branchId?: string;
   iat?: number;
   exp?: number;
 }
 
 export interface AuthenticatedRequest extends Request {
   user?: JWTPayload;
+  checkOwnership?: boolean;
 }
 
 class JWTConfig {

@@ -3,6 +3,15 @@ import jwtConfig, { AuthenticatedRequest, JWTPayload } from "../config/jwt";
 import { ApiResponseUtil } from "../utils/response";
 import { UserRole } from "../utils/types";
 
+// Re-export RBAC functions
+export { 
+  checkPermission, 
+  checkResourceOwnership, 
+  restrictTo,
+  checkDashboardAccess,
+  hasPermission
+} from "./rbac";
+
 /**
  * Authentication middleware to verify JWT token
  */

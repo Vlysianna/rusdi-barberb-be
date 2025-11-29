@@ -2,8 +2,9 @@ import { Router } from "express";
 import userController from "../controllers/userController";
 import {
   authenticateToken,
-  adminOnly,
-  resourceOwnerOrAdmin,
+  checkPermission,
+  checkResourceOwnership,
+  restrictTo,
 } from "../middleware/auth";
 import {
   validateBody,
@@ -56,7 +57,7 @@ const upload = multer({
 router.get(
   "/",
   authenticateToken,
-  adminOnly,
+  restrictTo('admin'),
   validateQuery(
     queryValidation.pagination.keys({
       role: Joi.string().valid("admin", "stylist", "customer").optional(),
@@ -71,7 +72,7 @@ router.get(
 router.post(
   "/",
   authenticateToken,
-  adminOnly,
+  checkPermission('users', 'create'),
   validateBody(
     userValidation.register.keys({
       role: Joi.string().valid("admin", "stylist", "customer").optional(),
@@ -83,13 +84,13 @@ router.post(
 );
 
 // GET /users/stats - Get user statistics (Admin only)
-router.get("/stats", authenticateToken, adminOnly, userController.getUserStats);
+router.get("/stats", authenticateToken, restrictTo('admin'), userController.getUserStats);
 
 // GET /users/search - Search users (Admin only)
 router.get(
   "/search",
   authenticateToken,
-  adminOnly,
+  restrictTo('admin'),
   validateQuery(
     Joi.object({
       q: Joi.string().min(1).max(100).required().messages({
@@ -108,7 +109,7 @@ router.get(
 router.put(
   "/bulk",
   authenticateToken,
-  adminOnly,
+  checkPermission('users', 'update'),
   validateBody(
     Joi.object({
       userIds: Joi.array().items(Joi.string()).min(1).required().messages({
@@ -135,7 +136,7 @@ router.put(
 router.get(
   "/export",
   authenticateToken,
-  adminOnly,
+  restrictTo('admin'),
   validateQuery(
     Joi.object({
       format: Joi.string().valid("csv", "json").optional().default("csv"),
@@ -153,7 +154,7 @@ router.get(
   "/:id",
   authenticateToken,
   validateId,
-  resourceOwnerOrAdmin("id"),
+  checkResourceOwnership('user'),
   userController.getUserById,
 );
 
@@ -162,7 +163,7 @@ router.put(
   "/:id",
   authenticateToken,
   validateId,
-  resourceOwnerOrAdmin("id"),
+  checkResourceOwnership('user'),
   validateBody(
     userValidation.updateProfile.keys({
       // Additional fields that admin can update
@@ -178,7 +179,7 @@ router.put(
 router.delete(
   "/:id",
   authenticateToken,
-  adminOnly,
+  checkPermission('users', 'delete'),
   validateId,
   userController.deleteUser,
 );
@@ -188,7 +189,7 @@ router.post(
   "/:id/avatar",
   authenticateToken,
   validateId,
-  resourceOwnerOrAdmin("id"),
+  checkResourceOwnership('user'),
   upload.single("avatar"),
   userController.uploadAvatar,
 );
@@ -198,7 +199,7 @@ router.get(
   "/:id/activity",
   authenticateToken,
   validateId,
-  resourceOwnerOrAdmin("id"),
+  checkResourceOwnership('user'),
   validateQuery(
     Joi.object({
       page: Joi.number().integer().min(1).optional().default(1),

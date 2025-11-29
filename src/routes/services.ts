@@ -2,9 +2,8 @@ import { Router } from "express";
 import { serviceController } from "../controllers/serviceController";
 import {
   authenticateToken,
-  adminOnly,
-  managerOrAdmin,
-  authenticatedUser,
+  checkPermission,
+  restrictTo,
 } from "../middleware/auth";
 import {
   validateBody,
@@ -125,7 +124,7 @@ router.get(
 router.post(
   "/",
   authenticateToken,
-  managerOrAdmin,
+  checkPermission('services', 'create'),
   validateBody(createServiceSchema),
   serviceController.createService,
 );
@@ -194,7 +193,7 @@ router.get(
 router.get(
   "/export",
   authenticateToken,
-  managerOrAdmin,
+  checkPermission('services', 'read'),
   validateQuery(
     Joi.object({
       format: Joi.string().valid("csv", "excel").optional().default("csv"),
@@ -223,7 +222,7 @@ router.get(
 router.put(
   "/:id",
   authenticateToken,
-  managerOrAdmin,
+  checkPermission('services', 'update'),
   validateId,
   validateBody(updateServiceSchema),
   serviceController.updateService,
@@ -233,7 +232,7 @@ router.put(
 router.delete(
   "/:id",
   authenticateToken,
-  adminOnly,
+  checkPermission('services', 'delete'),
   validateId,
   serviceController.deleteService,
 );
@@ -242,7 +241,7 @@ router.delete(
 router.patch(
   "/:id/status",
   authenticateToken,
-  managerOrAdmin,
+  checkPermission('services', 'update'),
   validateId,
   validateBody(
     Joi.object({
@@ -258,7 +257,7 @@ router.patch(
 router.post(
   "/:id/toggle-popular",
   authenticateToken,
-  managerOrAdmin,
+  checkPermission('services', 'update'),
   validateId,
   serviceController.toggleServicePopularity,
 );
@@ -267,7 +266,7 @@ router.post(
 router.get(
   "/:id/analytics",
   authenticateToken,
-  managerOrAdmin,
+  checkPermission('reports', 'read'),
   validateId,
   validateQuery(
     Joi.object({
@@ -319,7 +318,7 @@ router.get(
 router.get(
   "/:id/pricing-history",
   authenticateToken,
-  managerOrAdmin,
+  checkPermission('services', 'read'),
   validateId,
   serviceController.getServicePricingHistory,
 );
@@ -328,7 +327,7 @@ router.get(
 router.patch(
   "/bulk-update",
   authenticateToken,
-  managerOrAdmin,
+  checkPermission('services', 'update'),
   validateBody(
     Joi.object({
       serviceIds: Joi.array()
