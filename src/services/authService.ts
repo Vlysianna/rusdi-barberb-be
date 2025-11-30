@@ -27,6 +27,26 @@ export interface RegisterResponse {
   refreshToken: string;
 }
 
+// OTP storage (in-memory for simplicity, use Redis in production)
+interface OTPData {
+  otp: string;
+  email: string;
+  expiresAt: number;
+  attempts: number;
+}
+
+const otpStorage = new Map<string, OTPData>();
+
+// Clean up expired OTPs every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, data] of otpStorage.entries()) {
+    if (data.expiresAt < now) {
+      otpStorage.delete(key);
+    }
+  }
+}, 5 * 60 * 1000);
+
 class AuthService {
   private readonly saltRounds = 12;
 
@@ -457,8 +477,106 @@ class AuthService {
   }
 
   /**
+   * Generate 6-digit OTP for password reset
+   */
+  generatePasswordResetOTP(email: string): string {
+    // Generate random 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Store OTP with 10 minutes expiration
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+    
+    otpStorage.set(email.toLowerCase(), {
+      otp,
+      email: email.toLowerCase(),
+      expiresAt,
+      attempts: 0,
+    });
+
+    console.log(`OTP generated for ${email}: ${otp} (expires in 10 minutes)`);
+    
+    return otp;
+  }
+
+  /**
+   * Verify OTP for password reset
+   */
+  verifyPasswordResetOTP(email: string, otp: string): { isValid: boolean; message: string } {
+    const normalizedEmail = email.toLowerCase();
+    const otpData = otpStorage.get(normalizedEmail);
+
+    if (!otpData) {
+      return { isValid: false, message: "Kode OTP tidak ditemukan. Silakan minta OTP baru." };
+    }
+
+    // Check if OTP is expired
+    if (Date.now() > otpData.expiresAt) {
+      otpStorage.delete(normalizedEmail);
+      return { isValid: false, message: "Kode OTP sudah kadaluarsa. Silakan minta OTP baru." };
+    }
+
+    // Check max attempts (max 5 attempts)
+    if (otpData.attempts >= 5) {
+      otpStorage.delete(normalizedEmail);
+      return { isValid: false, message: "Terlalu banyak percobaan. Silakan minta OTP baru." };
+    }
+
+    // Increment attempts
+    otpData.attempts += 1;
+
+    // Verify OTP
+    if (otpData.otp !== otp) {
+      return { isValid: false, message: `Kode OTP salah. Sisa percobaan: ${5 - otpData.attempts}` };
+    }
+
+    // OTP is valid - don't delete yet, will be deleted after password reset
+    return { isValid: true, message: "Kode OTP valid." };
+  }
+
+  /**
+   * Reset password with OTP verification
+   */
+  async resetPasswordWithOTP(email: string, otp: string, newPassword: string): Promise<void> {
+    // Verify OTP first
+    const verification = this.verifyPasswordResetOTP(email, otp);
+    
+    if (!verification.isValid) {
+      throw new BadRequestError(verification.message);
+    }
+
+    // Find user by email
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email.toLowerCase()))
+      .limit(1);
+
+    if (!user) {
+      throw new NotFoundError("User tidak ditemukan");
+    }
+
+    // Hash new password
+    const hashedPassword = await this.hashPassword(newPassword);
+
+    // Update password
+    await db
+      .update(users)
+      .set({
+        password: hashedPassword,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, user.id));
+
+    // Delete OTP after successful password reset
+    otpStorage.delete(email.toLowerCase());
+    
+    console.log(`Password reset successful for ${email}`);
+  }
+
+  /**
    * Generate password reset token (simplified version)
    * In production, you'd want to store this in database with expiration
+   * @deprecated Use generatePasswordResetOTP instead
    */
   generatePasswordResetToken(email: string): string {
     const payload = {
@@ -472,6 +590,7 @@ class AuthService {
 
   /**
    * Verify password reset token
+   * @deprecated Use verifyPasswordResetOTP instead
    */
   verifyPasswordResetToken(token: string): { email: string; isValid: boolean } {
     try {

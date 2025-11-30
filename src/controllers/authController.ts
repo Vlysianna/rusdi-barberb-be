@@ -1,6 +1,7 @@
 import { Response, NextFunction } from "express";
 import { AuthenticatedRequest } from "../config/jwt";
 import authService from "../services/authService";
+import emailService from "../services/emailService";
 import { ApiResponseUtil } from "../utils/response";
 import { asyncHandler } from "../middleware/errorHandler";
 
@@ -116,75 +117,138 @@ class AuthController {
   );
 
   /**
-   * Request password reset
+   * Request password reset - sends OTP via email
    */
   requestPasswordReset = asyncHandler(
     async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
       const { email } = req.body;
 
       if (!email) {
-        return ApiResponseUtil.badRequest(res, "Email is required");
+        return ApiResponseUtil.badRequest(res, "Email wajib diisi");
       }
 
       // Check if user exists
       const user = await authService.getUserByEmail(email);
 
       if (!user) {
-        // For security, we don't reveal if email exists or not
+        // For security, we still return success but don't reveal if email exists
         return ApiResponseUtil.success(
           res,
-          "If the email exists, a password reset link has been sent",
+          "Jika email terdaftar, kode OTP telah dikirim",
         );
       }
 
-      // Generate password reset token
-      const resetToken = authService.generatePasswordResetToken(email);
+      // Generate OTP
+      const otp = authService.generatePasswordResetOTP(email);
 
-      // In a real application, you would send this token via email
-      // For demo purposes, we'll return it in the response
-      console.log(`Password reset token for ${email}: ${resetToken}`);
+      // Send OTP via email
+      const emailSent = await emailService.sendPasswordResetOTP(
+        email,
+        otp,
+        user.fullName,
+      );
+
+      if (!emailSent) {
+        console.error(`Failed to send OTP email to ${email}`);
+        return ApiResponseUtil.error(
+          res,
+          "Gagal mengirim kode OTP. Silakan coba lagi.",
+          undefined,
+          500,
+        );
+      }
+
+      console.log(`OTP email sent to ${email}`);
 
       return ApiResponseUtil.success(
         res,
-        "Password reset link has been sent to your email",
+        "Kode OTP telah dikirim ke email Anda",
         {
-          message: "Check your email for the reset link",
-          // Remove this in production
-          resetToken:
-            process.env.NODE_ENV === "development" ? resetToken : undefined,
+          message: "Periksa email Anda untuk kode OTP",
+          // Only show OTP in development mode for testing
+          otp: process.env.NODE_ENV === "development" ? otp : undefined,
         },
       );
     },
   );
 
   /**
-   * Reset password with token
+   * Verify OTP only (without resetting password)
+   */
+  verifyOTP = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      const { email, otp } = req.body;
+
+      if (!email || !otp) {
+        return ApiResponseUtil.badRequest(res, "Email dan kode OTP wajib diisi");
+      }
+
+      const result = authService.verifyPasswordResetOTP(email, otp);
+
+      if (!result.isValid) {
+        return ApiResponseUtil.badRequest(res, result.message);
+      }
+
+      return ApiResponseUtil.success(res, "Kode OTP valid", {
+        verified: true,
+      });
+    },
+  );
+
+  /**
+   * Reset password with OTP
    */
   resetPassword = asyncHandler(
     async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-      const { token, newPassword } = req.body;
+      const { email, otp, newPassword } = req.body;
 
-      if (!token || !newPassword) {
+      // Support both old token-based and new OTP-based reset
+      if (req.body.token) {
+        // Old token-based flow
+        const { token, newPassword: password } = req.body;
+        
+        if (!token || !password) {
+          return ApiResponseUtil.badRequest(
+            res,
+            "Token dan password baru wajib diisi",
+          );
+        }
+
+        const { email: tokenEmail, isValid } = authService.verifyPasswordResetToken(token);
+
+        if (!isValid) {
+          return ApiResponseUtil.badRequest(
+            res,
+            "Token tidak valid atau sudah kadaluarsa",
+          );
+        }
+
+        await authService.resetPassword(tokenEmail, password);
+        return ApiResponseUtil.success(res, "Password berhasil direset");
+      }
+
+      // New OTP-based flow
+      if (!email || !otp || !newPassword) {
         return ApiResponseUtil.badRequest(
           res,
-          "Token and new password are required",
+          "Email, kode OTP, dan password baru wajib diisi",
         );
       }
 
-      // Verify reset token
-      const { email, isValid } = authService.verifyPasswordResetToken(token);
-
-      if (!isValid) {
+      // Validate password strength
+      if (newPassword.length < 6) {
         return ApiResponseUtil.badRequest(
           res,
-          "Invalid or expired reset token",
+          "Password minimal 6 karakter",
         );
       }
 
-      // Reset password
-      await authService.resetPassword(email, newPassword);
-
-      return ApiResponseUtil.success(res, "Password reset successfully");
+      try {
+        await authService.resetPasswordWithOTP(email, otp, newPassword);
+        return ApiResponseUtil.success(res, "Password berhasil direset");
+      } catch (error: any) {
+        return ApiResponseUtil.badRequest(res, error.message || "Gagal reset password");
+      }
     },
   );
 

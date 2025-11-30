@@ -32,10 +32,13 @@ router.post("/login", validateBody(userValidation.login), authController.login);
 // POST /auth/refresh - Refresh access token
 router.post("/refresh", authController.refreshToken);
 
-// POST /auth/forgot-password - Request password reset
+// POST /auth/forgot-password - Request password reset (sends OTP)
 router.post("/forgot-password", authController.requestPasswordReset);
 
-// POST /auth/reset-password - Reset password with token
+// POST /auth/verify-otp - Verify OTP without resetting password
+router.post("/verify-otp", authController.verifyOTP);
+
+// POST /auth/reset-password - Reset password with OTP
 router.post("/reset-password", authController.resetPassword);
 
 /**
