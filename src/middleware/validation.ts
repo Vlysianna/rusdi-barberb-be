@@ -225,31 +225,31 @@ export const bookingValidation = {
     serviceId: Joi.string().required().messages({
       "any.required": "Service selection is required",
     }),
-    appointmentDate: Joi.date().iso().min("now").required().messages({
-      "date.min": "Appointment date cannot be in the past",
+    appointmentDate: Joi.date().iso().required().messages({
       "any.required": "Appointment date is required",
     }),
     appointmentTime: Joi.string()
-      .pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+      .pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/)
       .required()
       .messages({
-        "string.pattern.base": "Please provide a valid time in HH:MM format",
+        "string.pattern.base": "Please provide a valid time in HH:MM or HH:MM:SS format",
         "any.required": "Appointment time is required",
       }),
-    notes: Joi.string().max(500).optional().messages({
+    notes: Joi.string().max(500).optional().allow('', null).messages({
       "string.max": "Notes cannot exceed 500 characters",
     }),
+    addons: Joi.array().items(Joi.string()).optional(),
   }),
 
   update: Joi.object({
-    appointmentDate: Joi.date().iso().min("now").optional().messages({
-      "date.min": "Appointment date cannot be in the past",
+    appointmentDate: Joi.date().iso().optional().messages({
+      "date.base": "Please provide a valid date",
     }),
     appointmentTime: Joi.string()
-      .pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+      .pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/)
       .optional()
       .messages({
-        "string.pattern.base": "Please provide a valid time in HH:MM format",
+        "string.pattern.base": "Please provide a valid time in HH:MM or HH:MM:SS format",
       }),
     status: Joi.string()
       .valid(

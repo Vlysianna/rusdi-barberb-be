@@ -58,8 +58,8 @@ const createServiceSchema = Joi.object({
   isActive: Joi.boolean().optional().default(true),
   isPopular: Joi.boolean().optional().default(false),
   requirements: Joi.array().items(Joi.string().max(200)).optional().default([]),
-  instructions: Joi.string().max(1000).optional(),
-  image: Joi.string().uri().optional(),
+  instructions: Joi.string().max(1000).optional().allow('', null),
+  image: Joi.string().optional().allow('', null),
   tags: Joi.array().items(Joi.string().max(50)).optional().default([]),
 });
 
@@ -82,8 +82,8 @@ const updateServiceSchema = Joi.object({
   isActive: Joi.boolean().optional(),
   isPopular: Joi.boolean().optional(),
   requirements: Joi.array().items(Joi.string().max(200)).optional(),
-  instructions: Joi.string().max(1000).optional(),
-  image: Joi.string().uri().optional(),
+  instructions: Joi.string().max(1000).optional().allow('', null),
+  image: Joi.string().optional().allow('', null),
   tags: Joi.array().items(Joi.string().max(50)).optional(),
 }).min(1);
 

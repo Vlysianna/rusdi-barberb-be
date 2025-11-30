@@ -455,4 +455,92 @@ router.delete(
   stylistController.removeServiceFromStylist,
 );
 
+// GET /stylists/:id/schedules - Get all schedules for a stylist
+router.get(
+  "/:id/schedules",
+  authenticateToken,
+  validateId,
+  stylistController.getStylistSchedules,
+);
+
+// POST /stylists/:id/schedules - Add a schedule entry for a stylist
+router.post(
+  "/:id/schedules",
+  authenticateToken,
+  checkPermission('stylists', 'update'),
+  validateId,
+  validateBody(
+    Joi.object({
+      dayOfWeek: Joi.string()
+        .valid('sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday')
+        .required()
+        .messages({
+          "any.required": "Day of week is required",
+          "any.only": "Day of week must be a valid day name",
+        }),
+      startTime: Joi.string()
+        .pattern(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)
+        .required()
+        .messages({
+          "any.required": "Start time is required",
+          "string.pattern.base": "Start time must be in HH:mm format",
+        }),
+      endTime: Joi.string()
+        .pattern(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)
+        .required()
+        .messages({
+          "any.required": "End time is required",
+          "string.pattern.base": "End time must be in HH:mm format",
+        }),
+      isAvailable: Joi.boolean().optional().default(true),
+    }),
+  ),
+  stylistController.addStylistSchedule,
+);
+
+// PUT /stylists/:id/schedules/:scheduleId - Update a schedule entry
+router.put(
+  "/:id/schedules/:scheduleId",
+  authenticateToken,
+  checkPermission('stylists', 'update'),
+  validateParams(
+    Joi.object({
+      id: Joi.string().required(),
+      scheduleId: Joi.string().required(),
+    }),
+  ),
+  validateBody(
+    Joi.object({
+      startTime: Joi.string()
+        .pattern(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)
+        .optional()
+        .messages({
+          "string.pattern.base": "Start time must be in HH:mm format",
+        }),
+      endTime: Joi.string()
+        .pattern(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)
+        .optional()
+        .messages({
+          "string.pattern.base": "End time must be in HH:mm format",
+        }),
+      isAvailable: Joi.boolean().optional(),
+    }).min(1),
+  ),
+  stylistController.updateStylistScheduleEntry,
+);
+
+// DELETE /stylists/:id/schedules/:scheduleId - Delete a schedule entry
+router.delete(
+  "/:id/schedules/:scheduleId",
+  authenticateToken,
+  checkPermission('stylists', 'update'),
+  validateParams(
+    Joi.object({
+      id: Joi.string().required(),
+      scheduleId: Joi.string().required(),
+    }),
+  ),
+  stylistController.deleteStylistScheduleEntry,
+);
+
 export default router;

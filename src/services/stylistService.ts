@@ -7,6 +7,7 @@ import {
   reviews,
   services,
   stylistServices,
+  stylistSchedules,
 } from "../models";
 import {
   NotFoundError,
@@ -816,6 +817,213 @@ class StylistService {
       }
       throw new Error(
         `Failed to remove service from stylist: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    }
+  }
+
+  /**
+   * Get all schedules for a stylist
+   */
+  async getStylistSchedules(stylistId: string) {
+    try {
+      // Verify stylist exists
+      await this.getStylistById(stylistId);
+
+      const schedules = await db
+        .select()
+        .from(stylistSchedules)
+        .where(eq(stylistSchedules.stylistId, stylistId))
+        .orderBy(asc(stylistSchedules.dayOfWeek));
+
+      // Map dayOfWeek numbers to day names
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      
+      return schedules.map(schedule => ({
+        ...schedule,
+        dayOfWeek: dayNames[schedule.dayOfWeek] || schedule.dayOfWeek.toString(),
+      }));
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      throw new Error(
+        `Failed to get stylist schedules: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    }
+  }
+
+  /**
+   * Add a schedule entry for a stylist
+   */
+  async addStylistSchedule(
+    stylistId: string,
+    scheduleData: {
+      dayOfWeek: string;
+      startTime: string;
+      endTime: string;
+      isAvailable?: boolean;
+    },
+  ) {
+    try {
+      // Verify stylist exists
+      await this.getStylistById(stylistId);
+
+      // Convert day name to number
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const dayIndex = dayNames.indexOf(scheduleData.dayOfWeek.toLowerCase());
+      
+      if (dayIndex === -1) {
+        throw new ValidationError('Invalid day of week');
+      }
+
+      // Check if schedule for this day already exists
+      const existing = await db
+        .select()
+        .from(stylistSchedules)
+        .where(
+          and(
+            eq(stylistSchedules.stylistId, stylistId),
+            eq(stylistSchedules.dayOfWeek, dayIndex),
+          ),
+        )
+        .limit(1);
+
+      if (existing.length) {
+        throw new ConflictError('Schedule for this day already exists');
+      }
+
+      // Create schedule
+      const [newSchedule] = await db.insert(stylistSchedules).values({
+        stylistId,
+        dayOfWeek: dayIndex,
+        startTime: scheduleData.startTime,
+        endTime: scheduleData.endTime,
+        isAvailable: scheduleData.isAvailable ?? true,
+      });
+
+      // Fetch the created schedule
+      const [created] = await db
+        .select()
+        .from(stylistSchedules)
+        .where(
+          and(
+            eq(stylistSchedules.stylistId, stylistId),
+            eq(stylistSchedules.dayOfWeek, dayIndex),
+          ),
+        )
+        .limit(1);
+
+      return {
+        ...created,
+        dayOfWeek: dayNames[created.dayOfWeek],
+      };
+    } catch (error) {
+      if (
+        error instanceof NotFoundError ||
+        error instanceof ConflictError ||
+        error instanceof ValidationError
+      ) {
+        throw error;
+      }
+      throw new Error(
+        `Failed to add stylist schedule: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    }
+  }
+
+  /**
+   * Update a schedule entry
+   */
+  async updateStylistScheduleEntry(
+    stylistId: string,
+    scheduleId: string,
+    scheduleData: {
+      startTime?: string;
+      endTime?: string;
+      isAvailable?: boolean;
+    },
+  ) {
+    try {
+      // Verify stylist exists
+      await this.getStylistById(stylistId);
+
+      // Check if schedule exists
+      const [existing] = await db
+        .select()
+        .from(stylistSchedules)
+        .where(
+          and(
+            eq(stylistSchedules.id, scheduleId),
+            eq(stylistSchedules.stylistId, stylistId),
+          ),
+        )
+        .limit(1);
+
+      if (!existing) {
+        throw new NotFoundError('Schedule not found');
+      }
+
+      // Update schedule
+      await db
+        .update(stylistSchedules)
+        .set(scheduleData)
+        .where(eq(stylistSchedules.id, scheduleId));
+
+      // Fetch updated schedule
+      const [updated] = await db
+        .select()
+        .from(stylistSchedules)
+        .where(eq(stylistSchedules.id, scheduleId))
+        .limit(1);
+
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      return {
+        ...updated,
+        dayOfWeek: dayNames[updated.dayOfWeek],
+      };
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      throw new Error(
+        `Failed to update stylist schedule: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    }
+  }
+
+  /**
+   * Delete a schedule entry
+   */
+  async deleteStylistScheduleEntry(stylistId: string, scheduleId: string) {
+    try {
+      // Check if schedule exists
+      const [existing] = await db
+        .select()
+        .from(stylistSchedules)
+        .where(
+          and(
+            eq(stylistSchedules.id, scheduleId),
+            eq(stylistSchedules.stylistId, stylistId),
+          ),
+        )
+        .limit(1);
+
+      if (!existing) {
+        throw new NotFoundError('Schedule not found');
+      }
+
+      // Delete schedule
+      await db
+        .delete(stylistSchedules)
+        .where(eq(stylistSchedules.id, scheduleId));
+
+      return true;
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+      throw new Error(
+        `Failed to delete stylist schedule: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     }
   }

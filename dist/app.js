@@ -60,7 +60,7 @@ class App {
     initializeMiddlewares() {
         this.app.set("trust proxy", 1);
         const corsOptions = {
-            origin: process.env.CORS_ORIGIN || ["http://localhost:5173"],
+            origin: process.env.CORS_ORIGIN || ["http://localhost:8081", "http://localhost:5173"],
             credentials: true,
             optionsSuccessStatus: 200,
             methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],

@@ -419,8 +419,13 @@ class BookingService {
       const endMins = endMinutes % 60;
       const endTime = `${endHours.toString().padStart(2, "0")}:${endMins.toString().padStart(2, "0")}:00`;
 
+      // Generate booking ID first (since we use cuid2, not auto-increment)
+      const { createId } = await import("@paralleldrive/cuid2");
+      const bookingId = createId();
+
       // Create booking
       const newBookingData: NewBooking = {
+        id: bookingId,
         customerId,
         stylistId,
         serviceId,
@@ -432,20 +437,18 @@ class BookingService {
         notes,
       };
 
-      const [insertResult] = await db.insert(bookings).values(newBookingData);
+      await db.insert(bookings).values(newBookingData);
 
       // Log booking history
       await this.logBookingHistory({
-        bookingId: insertResult.insertId.toString(),
+        bookingId: bookingId,
         action: "CREATED",
         newStatus: BookingStatus.PENDING,
         performedBy: customerId,
       });
 
       // Get the created booking with details
-      const booking = await this.getBookingById(
-        insertResult.insertId.toString(),
-      );
+      const booking = await this.getBookingById(bookingId);
 
       if (!booking) {
         throw new DatabaseError("Failed to create booking");
@@ -680,14 +683,22 @@ class BookingService {
         )
         .limit(1);
 
-      if (!schedule) {
-        return false; // Stylist not available on this day
+      // Use default schedule if no specific schedule found (9 AM - 6 PM, except Sunday)
+      const defaultStartTime = "09:00:00";
+      const defaultEndTime = "18:00:00";
+      
+      // Check if it's Sunday (dayOfWeek 0) and no schedule - not available
+      if (!schedule && dayOfWeek === 0) {
+        return false; // Closed on Sunday by default
       }
+
+      const startTime = schedule?.startTime || defaultStartTime;
+      const endTime = schedule?.endTime || defaultEndTime;
 
       // Check if appointment time is within working hours
       const appointmentMinutes = this.timeToMinutes(appointmentTime);
-      const startMinutes = this.timeToMinutes(schedule.startTime);
-      const endMinutes = this.timeToMinutes(schedule.endTime);
+      const startMinutes = this.timeToMinutes(startTime);
+      const endMinutes = this.timeToMinutes(endTime);
       const appointmentEndMinutes = appointmentMinutes + duration;
 
       if (
@@ -769,9 +780,17 @@ class BookingService {
         )
         .limit(1);
 
-      if (!schedule) {
-        return timeSlots; // No schedule = no available slots
+      // Use default schedule if no specific schedule found (9 AM - 6 PM, except Sunday)
+      const defaultStartTime = "09:00:00";
+      const defaultEndTime = "18:00:00";
+      
+      // Check if it's Sunday (dayOfWeek 0) and no schedule - return empty
+      if (!schedule && dayOfWeek === 0) {
+        return timeSlots; // Closed on Sunday by default
       }
+
+      const startTime = schedule?.startTime || defaultStartTime;
+      const endTime = schedule?.endTime || defaultEndTime;
 
       // Get existing bookings
       const existingBookings = await db
@@ -790,8 +809,8 @@ class BookingService {
         );
 
       // Generate time slots (every 15 minutes)
-      const startMinutes = this.timeToMinutes(schedule.startTime);
-      const endMinutes = this.timeToMinutes(schedule.endTime);
+      const startMinutes = this.timeToMinutes(startTime);
+      const endMinutes = this.timeToMinutes(endTime);
 
       for (
         let minutes = startMinutes;
@@ -972,6 +991,7 @@ class BookingService {
       pending: [BookingStatus.CONFIRMED, BookingStatus.CANCELLED],
       confirmed: [
         BookingStatus.IN_PROGRESS,
+        BookingStatus.COMPLETED, // Allow direct completion from confirmed
         BookingStatus.CANCELLED,
         BookingStatus.NO_SHOW,
       ],

@@ -53,9 +53,8 @@ router.get(
       stylistId: Joi.string().required().messages({
         "any.required": "Stylist ID is required",
       }),
-      date: Joi.date().iso().min("now").required().messages({
+      date: Joi.date().iso().required().messages({
         "any.required": "Date is required",
-        "date.min": "Date cannot be in the past",
       }),
       serviceId: Joi.string().required().messages({
         "any.required": "Service ID is required",
@@ -128,10 +127,11 @@ router.put(
   checkResourceOwnership('booking'),
   validateBody(
     Joi.object({
-      reason: Joi.string().min(5).max(500).required().messages({
-        "string.min": "Cancellation reason must be at least 5 characters",
+      reason: Joi.string().max(500).optional().allow('', null).messages({
         "string.max": "Cancellation reason cannot exceed 500 characters",
-        "any.required": "Cancellation reason is required",
+      }),
+      cancelReason: Joi.string().max(500).optional().allow('', null).messages({
+        "string.max": "Cancellation reason cannot exceed 500 characters",
       }),
     }),
   ),

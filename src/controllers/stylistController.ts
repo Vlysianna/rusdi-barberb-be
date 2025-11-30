@@ -351,6 +351,80 @@ class StylistController {
       );
     },
   );
+
+  /**
+   * Get stylist schedules
+   */
+  getStylistSchedules = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      const { id } = req.params;
+
+      const schedules = await stylistService.getStylistSchedules(id);
+
+      return ApiResponseUtil.success(
+        res,
+        "Stylist schedules retrieved successfully",
+        schedules,
+      );
+    },
+  );
+
+  /**
+   * Add stylist schedule
+   */
+  addStylistSchedule = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      const { id } = req.params;
+      const scheduleData = req.body;
+
+      const schedule = await stylistService.addStylistSchedule(id, scheduleData);
+
+      return ApiResponseUtil.created(
+        res,
+        schedule,
+        "Stylist schedule added successfully",
+      );
+    },
+  );
+
+  /**
+   * Update stylist schedule entry
+   */
+  updateStylistScheduleEntry = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      const { id, scheduleId } = req.params;
+      const scheduleData = req.body;
+
+      const schedule = await stylistService.updateStylistScheduleEntry(
+        id,
+        scheduleId,
+        scheduleData,
+      );
+
+      return ApiResponseUtil.success(
+        res,
+        "Stylist schedule updated successfully",
+        schedule,
+      );
+    },
+  );
+
+  /**
+   * Delete stylist schedule entry
+   */
+  deleteStylistScheduleEntry = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      const { id, scheduleId } = req.params;
+
+      await stylistService.deleteStylistScheduleEntry(id, scheduleId);
+
+      return ApiResponseUtil.success(
+        res,
+        "Stylist schedule deleted successfully",
+        null,
+      );
+    },
+  );
 }
 
 export const stylistController = new StylistController();

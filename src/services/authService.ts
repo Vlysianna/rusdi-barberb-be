@@ -115,13 +115,13 @@ class AuthService {
       };
 
       // Insert user into database
-      const [insertResult] = await db.insert(users).values(newUserData);
+      const insertResult = await db.insert(users).values(newUserData);
 
-      // Get the created user
+      // Get the created user by email since we just inserted
       const [createdUser] = await db
         .select()
         .from(users)
-        .where(eq(users.id, insertResult.insertId.toString()))
+        .where(eq(users.email, userData.email))
         .limit(1);
 
       if (!createdUser) {
@@ -146,7 +146,8 @@ class AuthService {
       if (error instanceof ConflictError) {
         throw error;
       }
-      throw new Error("Registration failed");
+      console.error('Registration error details:', error);
+      throw new Error(`Registration failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

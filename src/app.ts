@@ -38,8 +38,34 @@ class App {
     this.app.set("trust proxy", 1);
 
     // CORS configuration
+    const allowedOrigins = [
+      "http://localhost:8081",
+      "http://localhost:5173",
+      "http://localhost:3000",
+      "http://192.168.1.32:8081",
+      "http://192.168.1.32:19000",
+      "http://192.168.1.32:19006",
+    ];
+
     const corsOptions = {
-      origin: process.env.CORS_ORIGIN || ["http://localhost:5173"],
+      origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+        // Allow requests with no origin (mobile apps, Postman, etc.)
+        if (!origin) {
+          return callback(null, true);
+        }
+        
+        // In development, allow all origins
+        if (process.env.NODE_ENV === "development") {
+          return callback(null, true);
+        }
+        
+        // In production, check against allowed origins
+        if (allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+        
+        callback(new Error("Not allowed by CORS"));
+      },
       credentials: true,
       optionsSuccessStatus: 200,
       methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],

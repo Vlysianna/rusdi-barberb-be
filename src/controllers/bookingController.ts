@@ -199,17 +199,13 @@ class BookingController {
   cancelBooking = asyncHandler(
     async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
       const { id } = req.params;
-      const { reason } = req.body;
+      const { reason, cancelReason } = req.body;
+
+      // Accept either reason or cancelReason
+      const cancellationReason = reason || cancelReason || 'Cancelled by user';
 
       if (!id) {
         return ApiResponseUtil.badRequest(res, "Booking ID is required");
-      }
-
-      if (!reason) {
-        return ApiResponseUtil.badRequest(
-          res,
-          "Cancellation reason is required",
-        );
       }
 
       // Check if booking exists and user has permission
@@ -232,7 +228,7 @@ class BookingController {
 
       const booking = await bookingService.cancelBooking(
         id,
-        reason,
+        cancellationReason,
         req.user!.userId,
       );
 
