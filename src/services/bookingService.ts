@@ -112,6 +112,24 @@ interface TimeSlot {
 
 class BookingService {
   /**
+   * Helper to ensure specialties is always an array
+   */
+  private parseSpecialties(specialties: unknown): string[] {
+    if (Array.isArray(specialties)) {
+      return specialties;
+    }
+    if (typeof specialties === 'string') {
+      try {
+        const parsed = JSON.parse(specialties);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  }
+
+  /**
    * Get bookings with pagination and filters
    */
   async getBookings(params: GetBookingsParams): Promise<GetBookingsResult> {
@@ -182,36 +200,70 @@ class BookingService {
       const orderDirection =
         sortOrder === "asc" ? asc(orderColumn) : desc(orderColumn);
 
-      // Get bookings - simplified query for debugging
+      // Get bookings with JOINs to related tables
       const bookingList = await db
-        .select()
+        .select({
+          booking: bookings,
+          customer: {
+            id: users.id,
+            fullName: users.fullName,
+            email: users.email,
+            phone: users.phone,
+          },
+          stylist: stylists,
+          service: services,
+        })
         .from(bookings)
+        .leftJoin(users, eq(bookings.customerId, users.id))
+        .leftJoin(stylists, eq(bookings.stylistId, stylists.id))
+        .leftJoin(services, eq(bookings.serviceId, services.id))
         .where(whereClause)
         .orderBy(orderDirection)
         .limit(limit)
         .offset(offset);
 
-      // Transform the data with minimal structure for debugging
-      const bookingsWithDetails: BookingWithDetails[] = bookingList.map(
-        (booking) => ({
-          ...booking,
-          customer: { id: "", fullName: "Unknown", email: "", phone: "" },
-          stylist: {
-            id: "",
-            user: {
+      // Get stylist user details for each booking
+      const bookingsWithDetails: BookingWithDetails[] = await Promise.all(
+        bookingList.map(async (result) => {
+          // Get stylist user details
+          let stylistUserDetails = { fullName: "Unknown", email: "" };
+          if (result.stylist?.userId) {
+            const [stylistUserResult] = await db
+              .select({
+                fullName: users.fullName,
+                email: users.email,
+              })
+              .from(users)
+              .where(eq(users.id, result.stylist.userId))
+              .limit(1);
+
+            if (stylistUserResult) {
+              stylistUserDetails = stylistUserResult;
+            }
+          }
+
+          return {
+            ...result.booking,
+            customer: result.customer || {
+              id: "",
               fullName: "Unknown",
               email: "",
+              phone: "",
             },
-            specialties: [],
-            rating: 0,
-          },
-          service: {
-            id: "",
-            name: "Unknown Service",
-            duration: 0,
-            price: 0,
-            category: "",
-          },
+            stylist: {
+              id: result.stylist?.id || "",
+              user: stylistUserDetails,
+              specialties: this.parseSpecialties(result.stylist?.specialties),
+              rating: parseFloat(result.stylist?.rating || "0"),
+            },
+            service: {
+              id: result.service?.id || "",
+              name: result.service?.name || "Unknown Service",
+              duration: result.service?.duration || 0,
+              price: parseFloat(result.service?.price || "0"),
+              category: result.service?.category || "",
+            },
+          };
         }),
       );
 
@@ -282,7 +334,7 @@ class BookingService {
         stylist: {
           id: result.stylist?.id || "",
           user: stylistUserDetails,
-          specialties: result.stylist?.specialties || [],
+          specialties: this.parseSpecialties(result.stylist?.specialties),
           rating: parseFloat(result.stylist?.rating || "0"),
         },
         service: {
