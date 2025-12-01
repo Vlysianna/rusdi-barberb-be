@@ -53,6 +53,7 @@ class App {
     constructor() {
         this.app = (0, express_1.default)();
         this.port = process.env.PORT || 3000;
+        this.basePath = process.env.BASE_PATH || "";
         this.initializeMiddlewares();
         this.initializeRoutes();
         this.initializeErrorHandling();
@@ -66,6 +67,9 @@ class App {
             "http://192.168.1.32:8081",
             "http://192.168.1.32:19000",
             "http://192.168.1.32:19006",
+            "https://asessment24.site",
+            "https://admin.asessment24.site",
+            "https://barber-admin.asessment24.site",
         ];
         const corsOptions = {
             origin: (origin, callback) => {
@@ -75,7 +79,7 @@ class App {
                 if (process.env.NODE_ENV === "development") {
                     return callback(null, true);
                 }
-                if (allowedOrigins.includes(origin)) {
+                if (allowedOrigins.includes(origin) || origin.includes("asessment24.site")) {
                     return callback(null, true);
                 }
                 callback(new Error("Not allowed by CORS"));
@@ -109,7 +113,7 @@ class App {
                 next();
             });
         }
-        this.app.get("/health", (req, res) => {
+        this.app.get(`${this.basePath}/health`, (req, res) => {
             res.status(200).json({
                 status: "OK",
                 timestamp: new Date().toISOString(),
@@ -118,7 +122,7 @@ class App {
                 version: process.env.npm_package_version || "1.0.0",
             });
         });
-        this.app.get("/api/v1/health", (req, res) => {
+        this.app.get(`${this.basePath}/api/v1/health`, (req, res) => {
             res.status(200).json({
                 status: "OK",
                 timestamp: new Date().toISOString(),
@@ -127,32 +131,32 @@ class App {
                 version: process.env.npm_package_version || "1.0.0",
             });
         });
-        this.app.get("/", (req, res) => {
+        this.app.get(`${this.basePath}/`, (req, res) => {
             res.json({
                 name: "Rusdi Barber API",
                 version: "1.0.0",
                 description: "Barber shop booking and management system API",
                 endpoints: {
-                    health: "/health",
-                    auth: "/api/v1/auth",
-                    users: "/api/v1/users",
-                    stylists: "/api/v1/stylists",
-                    services: "/api/v1/services",
-                    bookings: "/api/v1/bookings",
-                    payments: "/api/v1/payments",
-                    reviews: "/api/v1/reviews",
-                    notifications: "/api/v1/notifications",
-                    dashboard: "/api/v1/dashboard",
+                    health: `${this.basePath}/health`,
+                    auth: `${this.basePath}/api/v1/auth`,
+                    users: `${this.basePath}/api/v1/users`,
+                    stylists: `${this.basePath}/api/v1/stylists`,
+                    services: `${this.basePath}/api/v1/services`,
+                    bookings: `${this.basePath}/api/v1/bookings`,
+                    payments: `${this.basePath}/api/v1/payments`,
+                    reviews: `${this.basePath}/api/v1/reviews`,
+                    notifications: `${this.basePath}/api/v1/notifications`,
+                    dashboard: `${this.basePath}/api/v1/dashboard`,
                 },
                 documentation: {
                     message: "API documentation will be available soon",
-                    swagger: "/api/docs",
+                    swagger: `${this.basePath}/api/docs`,
                 },
             });
         });
     }
     initializeRoutes() {
-        const apiPrefix = "/api/v1";
+        const apiPrefix = `${this.basePath}/api/v1`;
         this.app.use(`${apiPrefix}/auth`, auth_1.default);
         this.app.use(`${apiPrefix}/users`, users_1.default);
         this.app.use(`${apiPrefix}/stylists`, stylists_1.default);

@@ -2,6 +2,7 @@ import { Application } from "express";
 declare class App {
     app: Application;
     port: string | number;
+    basePath: string;
     constructor();
     private initializeMiddlewares;
     private initializeRoutes;
