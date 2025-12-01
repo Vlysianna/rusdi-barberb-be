@@ -10,14 +10,29 @@ const validation_1 = require("../middleware/validation");
 const joi_1 = __importDefault(require("joi"));
 const router = (0, express_1.Router)();
 const createStylistSchema = joi_1.default.object({
-    userId: joi_1.default.string().required().messages({
-        "any.required": "User ID is required",
-        "string.empty": "User ID cannot be empty",
+    userId: joi_1.default.string().optional(),
+    email: joi_1.default.string().email().optional().messages({
+        "string.email": "Please provide a valid email address",
+    }),
+    password: joi_1.default.string().min(8).optional().messages({
+        "string.min": "Password must be at least 8 characters",
+    }),
+    fullName: joi_1.default.string().min(2).max(100).optional().messages({
+        "string.min": "Full name must be at least 2 characters",
+        "string.max": "Full name cannot exceed 100 characters",
+    }),
+    phone: joi_1.default.string()
+        .pattern(/^(\+62|62|0)8[1-9][0-9]{6,9}$/)
+        .optional()
+        .allow('', null)
+        .messages({
+        "string.pattern.base": "Please provide a valid Indonesian phone number",
     }),
     specialties: joi_1.default.array().items(joi_1.default.string()).optional().default([]),
     experience: joi_1.default.number().integer().min(0).optional().default(0),
     commissionRate: joi_1.default.number().min(0).max(100).optional().default(15),
     isAvailable: joi_1.default.boolean().optional().default(true),
+    bio: joi_1.default.string().max(500).optional().allow('', null),
     schedule: joi_1.default.object({
         monday: joi_1.default.object({
             isWorking: joi_1.default.boolean().required(),
@@ -83,7 +98,15 @@ const createStylistSchema = joi_1.default.object({
                 .required(),
         }).optional(),
     }).optional(),
-    bio: joi_1.default.string().max(500).optional(),
+}).custom((value, helpers) => {
+    const hasUserId = value.userId && value.userId.trim() !== '';
+    const hasNewUserData = value.email && value.password && value.fullName;
+    if (!hasUserId && !hasNewUserData) {
+        return helpers.error('custom.userRequired');
+    }
+    return value;
+}).messages({
+    'custom.userRequired': 'Either userId or new user details (email, password, fullName) is required',
 });
 const updateStylistSchema = joi_1.default.object({
     specialties: joi_1.default.array().items(joi_1.default.string()).optional(),

@@ -1,10 +1,14 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const drizzle_orm_1 = require("drizzle-orm");
 const database_1 = require("../config/database");
 const models_1 = require("../models");
 const errorHandler_1 = require("../middleware/errorHandler");
 const types_1 = require("../utils/types");
+const bcryptjs_1 = __importDefault(require("bcryptjs"));
 class StylistService {
     async getAllStylists(filters) {
         try {
@@ -111,28 +115,60 @@ class StylistService {
     }
     async createStylist(data) {
         try {
-            const existingUser = await database_1.db
-                .select()
-                .from(models_1.users)
-                .where((0, drizzle_orm_1.eq)(models_1.users.id, data.userId))
-                .limit(1);
-            if (!existingUser.length) {
-                throw new errorHandler_1.NotFoundError("User not found");
+            let userId = data.userId;
+            if (!userId && data.email && data.password && data.fullName) {
+                const existingEmail = await database_1.db
+                    .select()
+                    .from(models_1.users)
+                    .where((0, drizzle_orm_1.eq)(models_1.users.email, data.email))
+                    .limit(1);
+                if (existingEmail.length) {
+                    throw new errorHandler_1.ConflictError("Email already registered");
+                }
+                const hashedPassword = await bcryptjs_1.default.hash(data.password, 12);
+                const [newUser] = await database_1.db.insert(models_1.users).values({
+                    email: data.email,
+                    password: hashedPassword,
+                    fullName: data.fullName,
+                    phone: data.phone || null,
+                    role: types_1.UserRole.STYLIST,
+                    isActive: true,
+                    emailVerified: false,
+                });
+                const [createdUser] = await database_1.db
+                    .select({ id: models_1.users.id })
+                    .from(models_1.users)
+                    .where((0, drizzle_orm_1.eq)(models_1.users.email, data.email))
+                    .limit(1);
+                userId = createdUser.id;
+            }
+            else if (!userId) {
+                throw new errorHandler_1.ValidationError("Either userId or user details (email, password, fullName) is required");
+            }
+            else {
+                const existingUser = await database_1.db
+                    .select()
+                    .from(models_1.users)
+                    .where((0, drizzle_orm_1.eq)(models_1.users.id, userId))
+                    .limit(1);
+                if (!existingUser.length) {
+                    throw new errorHandler_1.NotFoundError("User not found");
+                }
+                await database_1.db
+                    .update(models_1.users)
+                    .set({ role: types_1.UserRole.STYLIST })
+                    .where((0, drizzle_orm_1.eq)(models_1.users.id, userId));
             }
             const existingStylist = await database_1.db
                 .select()
                 .from(models_1.stylists)
-                .where((0, drizzle_orm_1.eq)(models_1.stylists.userId, data.userId))
+                .where((0, drizzle_orm_1.eq)(models_1.stylists.userId, userId))
                 .limit(1);
             if (existingStylist.length) {
                 throw new errorHandler_1.ConflictError("User is already a stylist");
             }
-            await database_1.db
-                .update(models_1.users)
-                .set({ role: types_1.UserRole.STYLIST })
-                .where((0, drizzle_orm_1.eq)(models_1.users.id, data.userId));
             const stylistData = {
-                userId: data.userId,
+                userId: userId,
                 specialties: data.specialties || [],
                 experience: data.experience || 0,
                 commissionRate: (data.commissionRate || 15).toString(),
@@ -155,7 +191,7 @@ class StylistService {
             return await this.getStylistById(insertResult.insertId.toString());
         }
         catch (error) {
-            if (error instanceof errorHandler_1.NotFoundError || error instanceof errorHandler_1.ConflictError) {
+            if (error instanceof errorHandler_1.NotFoundError || error instanceof errorHandler_1.ConflictError || error instanceof errorHandler_1.ValidationError) {
                 throw error;
             }
             throw new Error(`Failed to create stylist: ${error instanceof Error ? error.message : "Unknown error"}`);

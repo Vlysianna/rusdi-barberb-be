@@ -1,5 +1,9 @@
 export interface CreateStylistData {
-    userId: string;
+    userId?: string;
+    email?: string;
+    password?: string;
+    fullName?: string;
+    phone?: string;
     specialties?: string[];
     experience?: number;
     commissionRate?: number;

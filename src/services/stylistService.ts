@@ -15,9 +15,14 @@ import {
   ValidationError,
 } from "../middleware/errorHandler";
 import { UserRole } from "../utils/types";
+import bcrypt from "bcryptjs";
 
 export interface CreateStylistData {
-  userId: string;
+  userId?: string;
+  email?: string;
+  password?: string;
+  fullName?: string;
+  phone?: string;
   specialties?: string[];
   experience?: number;
   commissionRate?: number;
@@ -229,37 +234,78 @@ class StylistService {
    */
   async createStylist(data: CreateStylistData) {
     try {
-      // Check if user exists and is not already a stylist
-      const existingUser = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, data.userId))
-        .limit(1);
+      let userId = data.userId;
 
-      if (!existingUser.length) {
-        throw new NotFoundError("User not found");
+      // Option 2: Create new user if no userId provided
+      if (!userId && data.email && data.password && data.fullName) {
+        // Check if email already exists
+        const existingEmail = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, data.email))
+          .limit(1);
+
+        if (existingEmail.length) {
+          throw new ConflictError("Email already registered");
+        }
+
+        // Hash password
+        const hashedPassword = await bcrypt.hash(data.password, 12);
+
+        // Create new user with stylist role
+        const [newUser] = await db.insert(users).values({
+          email: data.email,
+          password: hashedPassword,
+          fullName: data.fullName,
+          phone: data.phone || null,
+          role: UserRole.STYLIST,
+          isActive: true,
+          emailVerified: false,
+        });
+
+        // Get the created user ID
+        const [createdUser] = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.email, data.email))
+          .limit(1);
+
+        userId = createdUser.id;
+      } else if (!userId) {
+        throw new ValidationError("Either userId or user details (email, password, fullName) is required");
+      } else {
+        // Option 1: Use existing user
+        const existingUser = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1);
+
+        if (!existingUser.length) {
+          throw new NotFoundError("User not found");
+        }
+
+        // Update user role to stylist
+        await db
+          .update(users)
+          .set({ role: UserRole.STYLIST })
+          .where(eq(users.id, userId));
       }
 
       // Check if user is already a stylist
       const existingStylist = await db
         .select()
         .from(stylists)
-        .where(eq(stylists.userId, data.userId))
+        .where(eq(stylists.userId, userId))
         .limit(1);
 
       if (existingStylist.length) {
         throw new ConflictError("User is already a stylist");
       }
 
-      // Update user role to stylist
-      await db
-        .update(users)
-        .set({ role: UserRole.STYLIST })
-        .where(eq(users.id, data.userId));
-
       // Create stylist record
       const stylistData = {
-        userId: data.userId,
+        userId: userId,
         specialties: data.specialties || [],
         experience: data.experience || 0,
         commissionRate: (data.commissionRate || 15).toString(),
@@ -284,7 +330,7 @@ class StylistService {
       // Return created stylist with user data
       return await this.getStylistById(insertResult.insertId.toString());
     } catch (error) {
-      if (error instanceof NotFoundError || error instanceof ConflictError) {
+      if (error instanceof NotFoundError || error instanceof ConflictError || error instanceof ValidationError) {
         throw error;
       }
       throw new Error(
