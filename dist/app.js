@@ -54,6 +54,7 @@ class App {
         this.app = (0, express_1.default)();
         this.port = process.env.PORT || 3000;
         this.basePath = process.env.BASE_PATH || "/barber";
+        console.log(`🔧 BASE_PATH configured as: "${this.basePath}"`);
         this.initializeMiddlewares();
         this.initializeRoutes();
         this.initializeErrorHandling();
