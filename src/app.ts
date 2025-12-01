@@ -28,7 +28,8 @@ class App {
   constructor() {
     this.app = express();
     this.port = process.env.PORT || 3000;
-    this.basePath = process.env.BASE_PATH || "";
+    // Default to /barber for production hosting
+    this.basePath = process.env.BASE_PATH || "/barber";
 
     this.initializeMiddlewares();
     this.initializeRoutes();

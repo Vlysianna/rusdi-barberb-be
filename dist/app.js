@@ -53,7 +53,7 @@ class App {
     constructor() {
         this.app = (0, express_1.default)();
         this.port = process.env.PORT || 3000;
-        this.basePath = process.env.BASE_PATH || "";
+        this.basePath = process.env.BASE_PATH || "/barber";
         this.initializeMiddlewares();
         this.initializeRoutes();
         this.initializeErrorHandling();
