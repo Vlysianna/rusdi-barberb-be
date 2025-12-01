@@ -3,10 +3,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.userRateLimit = exports.requireEmailVerification = exports.requireActiveAccount = exports.addUserToBody = exports.bookingAccess = exports.stylistResourceAccess = exports.customerResourceAccess = exports.resourceOwnerOrAdmin = exports.authenticatedUser = exports.stylistOrAdmin = exports.managerOrAdmin = exports.adminOnly = exports.authorizeRoles = exports.optionalAuth = exports.authenticateToken = void 0;
+exports.userRateLimit = exports.requireEmailVerification = exports.requireActiveAccount = exports.addUserToBody = exports.bookingAccess = exports.stylistResourceAccess = exports.customerResourceAccess = exports.resourceOwnerOrAdmin = exports.authenticatedUser = exports.stylistOrAdmin = exports.managerOrAdmin = exports.adminOnly = exports.authorizeRoles = exports.optionalAuth = exports.authenticateToken = exports.hasPermission = exports.checkDashboardAccess = exports.restrictTo = exports.checkResourceOwnership = exports.checkPermission = void 0;
 const jwt_1 = __importDefault(require("../config/jwt"));
 const response_1 = require("../utils/response");
 const types_1 = require("../utils/types");
+var rbac_1 = require("./rbac");
+Object.defineProperty(exports, "checkPermission", { enumerable: true, get: function () { return rbac_1.checkPermission; } });
+Object.defineProperty(exports, "checkResourceOwnership", { enumerable: true, get: function () { return rbac_1.checkResourceOwnership; } });
+Object.defineProperty(exports, "restrictTo", { enumerable: true, get: function () { return rbac_1.restrictTo; } });
+Object.defineProperty(exports, "checkDashboardAccess", { enumerable: true, get: function () { return rbac_1.checkDashboardAccess; } });
+Object.defineProperty(exports, "hasPermission", { enumerable: true, get: function () { return rbac_1.hasPermission; } });
 const authenticateToken = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;

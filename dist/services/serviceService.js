@@ -102,7 +102,8 @@ class ServiceService {
             const [createdService] = await database_1.db
                 .select()
                 .from(service_1.services)
-                .where((0, drizzle_orm_1.eq)(service_1.services.id, insertResult.insertId.toString()))
+                .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(service_1.services.name, newServiceData.name), (0, drizzle_orm_1.eq)(service_1.services.description, newServiceData.description), (0, drizzle_orm_1.eq)(service_1.services.category, newServiceData.category)))
+                .orderBy((0, drizzle_orm_1.desc)(service_1.services.createdAt))
                 .limit(1);
             if (!createdService) {
                 throw new errorHandler_1.DatabaseError("Failed to create service");

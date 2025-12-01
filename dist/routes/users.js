@@ -32,18 +32,18 @@ const upload = (0, multer_1.default)({
         cb(null, true);
     },
 });
-router.get("/", auth_1.authenticateToken, auth_1.adminOnly, (0, validation_1.validateQuery)(validation_1.queryValidation.pagination.keys({
+router.get("/", auth_1.authenticateToken, (0, auth_1.restrictTo)('admin'), (0, validation_1.validateQuery)(validation_1.queryValidation.pagination.keys({
     role: joi_1.default.string().valid("admin", "stylist", "customer").optional(),
     isActive: joi_1.default.boolean().optional(),
     search: joi_1.default.string().min(1).max(100).optional(),
 })), userController_1.default.getUsers);
-router.post("/", auth_1.authenticateToken, auth_1.adminOnly, (0, validation_1.validateBody)(validation_1.userValidation.register.keys({
+router.post("/", auth_1.authenticateToken, (0, auth_1.checkPermission)('users', 'create'), (0, validation_1.validateBody)(validation_1.userValidation.register.keys({
     role: joi_1.default.string().valid("admin", "stylist", "customer").optional(),
     isActive: joi_1.default.boolean().optional(),
     emailVerified: joi_1.default.boolean().optional(),
 })), userController_1.default.createUser);
-router.get("/stats", auth_1.authenticateToken, auth_1.adminOnly, userController_1.default.getUserStats);
-router.get("/search", auth_1.authenticateToken, auth_1.adminOnly, (0, validation_1.validateQuery)(joi_1.default.object({
+router.get("/stats", auth_1.authenticateToken, (0, auth_1.restrictTo)('admin'), userController_1.default.getUserStats);
+router.get("/search", auth_1.authenticateToken, (0, auth_1.restrictTo)('admin'), (0, validation_1.validateQuery)(joi_1.default.object({
     q: joi_1.default.string().min(1).max(100).required().messages({
         "any.required": "Search query is required",
         "string.min": "Search query must be at least 1 character",
@@ -52,7 +52,7 @@ router.get("/search", auth_1.authenticateToken, auth_1.adminOnly, (0, validation
     page: joi_1.default.number().integer().min(1).optional().default(1),
     limit: joi_1.default.number().integer().min(1).max(100).optional().default(10),
 })), userController_1.default.searchUsers);
-router.put("/bulk", auth_1.authenticateToken, auth_1.adminOnly, (0, validation_1.validateBody)(joi_1.default.object({
+router.put("/bulk", auth_1.authenticateToken, (0, auth_1.checkPermission)('users', 'update'), (0, validation_1.validateBody)(joi_1.default.object({
     userIds: joi_1.default.array().items(joi_1.default.string()).min(1).required().messages({
         "array.min": "At least one user ID is required",
         "any.required": "User IDs array is required",
@@ -69,18 +69,18 @@ router.put("/bulk", auth_1.authenticateToken, auth_1.adminOnly, (0, validation_1
         "any.required": "Update data is required",
     }),
 })), userController_1.default.bulkUpdateUsers);
-router.get("/export", auth_1.authenticateToken, auth_1.adminOnly, (0, validation_1.validateQuery)(joi_1.default.object({
+router.get("/export", auth_1.authenticateToken, (0, auth_1.restrictTo)('admin'), (0, validation_1.validateQuery)(joi_1.default.object({
     format: joi_1.default.string().valid("csv", "json").optional().default("csv"),
 })), userController_1.default.exportUsers);
-router.get("/:id", auth_1.authenticateToken, validation_1.validateId, (0, auth_1.resourceOwnerOrAdmin)("id"), userController_1.default.getUserById);
-router.put("/:id", auth_1.authenticateToken, validation_1.validateId, (0, auth_1.resourceOwnerOrAdmin)("id"), (0, validation_1.validateBody)(validation_1.userValidation.updateProfile.keys({
+router.get("/:id", auth_1.authenticateToken, validation_1.validateId, (0, auth_1.checkResourceOwnership)('user'), userController_1.default.getUserById);
+router.put("/:id", auth_1.authenticateToken, validation_1.validateId, (0, auth_1.checkResourceOwnership)('user'), (0, validation_1.validateBody)(validation_1.userValidation.updateProfile.keys({
     isActive: joi_1.default.boolean().optional(),
     emailVerified: joi_1.default.boolean().optional(),
     role: joi_1.default.string().valid("admin", "stylist", "customer").optional(),
 })), userController_1.default.updateUser);
-router.delete("/:id", auth_1.authenticateToken, auth_1.adminOnly, validation_1.validateId, userController_1.default.deleteUser);
-router.post("/:id/avatar", auth_1.authenticateToken, validation_1.validateId, (0, auth_1.resourceOwnerOrAdmin)("id"), upload.single("avatar"), userController_1.default.uploadAvatar);
-router.get("/:id/activity", auth_1.authenticateToken, validation_1.validateId, (0, auth_1.resourceOwnerOrAdmin)("id"), (0, validation_1.validateQuery)(joi_1.default.object({
+router.delete("/:id", auth_1.authenticateToken, (0, auth_1.checkPermission)('users', 'delete'), validation_1.validateId, userController_1.default.deleteUser);
+router.post("/:id/avatar", auth_1.authenticateToken, validation_1.validateId, (0, auth_1.checkResourceOwnership)('user'), upload.single("avatar"), userController_1.default.uploadAvatar);
+router.get("/:id/activity", auth_1.authenticateToken, validation_1.validateId, (0, auth_1.checkResourceOwnership)('user'), (0, validation_1.validateQuery)(joi_1.default.object({
     page: joi_1.default.number().integer().min(1).optional().default(1),
     limit: joi_1.default.number().integer().min(1).max(50).optional().default(20),
 })), userController_1.default.getUserActivity);

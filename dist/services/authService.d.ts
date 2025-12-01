@@ -46,6 +46,12 @@ declare class AuthService {
         preferences?: string;
         avatar?: string;
     }): Promise<SanitizedUser>;
+    generatePasswordResetOTP(email: string): string;
+    verifyPasswordResetOTP(email: string, otp: string): {
+        isValid: boolean;
+        message: string;
+    };
+    resetPasswordWithOTP(email: string, otp: string, newPassword: string): Promise<void>;
     generatePasswordResetToken(email: string): string;
     verifyPasswordResetToken(token: string): {
         email: string;

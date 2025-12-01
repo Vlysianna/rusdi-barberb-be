@@ -59,8 +59,27 @@ class App {
     }
     initializeMiddlewares() {
         this.app.set("trust proxy", 1);
+        const allowedOrigins = [
+            "http://localhost:8081",
+            "http://localhost:5173",
+            "http://localhost:3000",
+            "http://192.168.1.32:8081",
+            "http://192.168.1.32:19000",
+            "http://192.168.1.32:19006",
+        ];
         const corsOptions = {
-            origin: process.env.CORS_ORIGIN || ["http://localhost:8081", "http://localhost:5173"],
+            origin: (origin, callback) => {
+                if (!origin) {
+                    return callback(null, true);
+                }
+                if (process.env.NODE_ENV === "development") {
+                    return callback(null, true);
+                }
+                if (allowedOrigins.includes(origin)) {
+                    return callback(null, true);
+                }
+                callback(new Error("Not allowed by CORS"));
+            },
             credentials: true,
             optionsSuccessStatus: 200,
             methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],

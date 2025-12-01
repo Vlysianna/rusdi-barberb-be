@@ -296,6 +296,46 @@ declare class StylistService {
     getStylistSpecialties(): Promise<string[]>;
     assignServiceToStylist(stylistId: string, serviceId: string): Promise<boolean>;
     removeServiceFromStylist(stylistId: string, serviceId: string): Promise<boolean>;
+    getStylistSchedules(stylistId: string): Promise<{
+        dayOfWeek: string;
+        id: string;
+        stylistId: string;
+        startTime: string;
+        endTime: string;
+        isAvailable: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+    }[]>;
+    addStylistSchedule(stylistId: string, scheduleData: {
+        dayOfWeek: string;
+        startTime: string;
+        endTime: string;
+        isAvailable?: boolean;
+    }): Promise<{
+        dayOfWeek: string;
+        id: string;
+        stylistId: string;
+        startTime: string;
+        endTime: string;
+        isAvailable: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    updateStylistScheduleEntry(stylistId: string, scheduleId: string, scheduleData: {
+        startTime?: string;
+        endTime?: string;
+        isAvailable?: boolean;
+    }): Promise<{
+        dayOfWeek: string;
+        id: string;
+        stylistId: string;
+        startTime: string;
+        endTime: string;
+        isAvailable: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    deleteStylistScheduleEntry(stylistId: string, scheduleId: string): Promise<boolean>;
 }
 declare const _default: StylistService;
 export default _default;

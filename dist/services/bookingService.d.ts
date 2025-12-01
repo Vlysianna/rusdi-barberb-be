@@ -74,6 +74,7 @@ interface TimeSlot {
     reason?: string;
 }
 declare class BookingService {
+    private parseSpecialties;
     getBookings(params: GetBookingsParams): Promise<GetBookingsResult>;
     getBookingById(bookingId: string): Promise<BookingWithDetails | null>;
     createBooking(bookingData: CreateBookingData): Promise<BookingWithDetails>;

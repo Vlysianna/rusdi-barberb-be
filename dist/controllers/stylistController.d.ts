@@ -15,6 +15,10 @@ declare class StylistController {
     getStylistSpecialties: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
     assignServiceToStylist: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
     removeServiceFromStylist: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
+    getStylistSchedules: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
+    addStylistSchedule: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
+    updateStylistScheduleEntry: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
+    deleteStylistScheduleEntry: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
 }
 export declare const stylistController: StylistController;
 export default stylistController;

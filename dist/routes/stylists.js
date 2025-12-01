@@ -167,7 +167,7 @@ const querySchema = joi_1.default.object({
         .optional(),
 });
 router.get("/", auth_1.authenticateToken, (0, validation_1.validateQuery)(querySchema), stylistController_1.stylistController.getAllStylists);
-router.post("/", auth_1.authenticateToken, auth_1.managerOrAdmin, (0, validation_1.validateBody)(createStylistSchema), stylistController_1.stylistController.createStylist);
+router.post("/", auth_1.authenticateToken, (0, auth_1.checkPermission)('stylists', 'create'), (0, validation_1.validateBody)(createStylistSchema), stylistController_1.stylistController.createStylist);
 router.get("/available", auth_1.authenticateToken, (0, validation_1.validateQuery)(joi_1.default.object({
     date: joi_1.default.string().isoDate().required().messages({
         "any.required": "Date is required",
@@ -183,14 +183,14 @@ router.get("/available", auth_1.authenticateToken, (0, validation_1.validateQuer
 })), stylistController_1.stylistController.getAvailableStylists);
 router.get("/specialties", auth_1.authenticateToken, stylistController_1.stylistController.getStylistSpecialties);
 router.get("/:id", auth_1.authenticateToken, validation_1.validateId, stylistController_1.stylistController.getStylistById);
-router.put("/:id", auth_1.authenticateToken, validation_1.validateId, (0, validation_1.validateBody)(updateStylistSchema), stylistController_1.stylistController.updateStylist);
-router.delete("/:id", auth_1.authenticateToken, auth_1.adminOnly, validation_1.validateId, stylistController_1.stylistController.deleteStylist);
-router.patch("/:id/availability", auth_1.authenticateToken, validation_1.validateId, (0, validation_1.validateBody)(joi_1.default.object({
+router.put("/:id", auth_1.authenticateToken, (0, auth_1.checkResourceOwnership)('stylist'), validation_1.validateId, (0, validation_1.validateBody)(updateStylistSchema), stylistController_1.stylistController.updateStylist);
+router.delete("/:id", auth_1.authenticateToken, (0, auth_1.checkPermission)('stylists', 'delete'), validation_1.validateId, stylistController_1.stylistController.deleteStylist);
+router.patch("/:id/availability", auth_1.authenticateToken, (0, auth_1.checkResourceOwnership)('stylist'), validation_1.validateId, (0, validation_1.validateBody)(joi_1.default.object({
     isAvailable: joi_1.default.boolean().required().messages({
         "any.required": "Availability status is required",
     }),
 })), stylistController_1.stylistController.updateAvailability);
-router.patch("/:id/schedule", auth_1.authenticateToken, validation_1.validateId, (0, validation_1.validateBody)(joi_1.default.object({
+router.patch("/:id/schedule", auth_1.authenticateToken, (0, auth_1.checkResourceOwnership)('stylist'), validation_1.validateId, (0, validation_1.validateBody)(joi_1.default.object({
     schedule: joi_1.default.object({
         monday: joi_1.default.object({
             isWorking: joi_1.default.boolean().required(),
@@ -270,11 +270,11 @@ router.get("/:id/bookings", auth_1.authenticateToken, validation_1.validateId, (
     dateFrom: joi_1.default.string().isoDate().optional(),
     dateTo: joi_1.default.string().isoDate().optional(),
 })), stylistController_1.stylistController.getStylistBookings);
-router.get("/:id/performance", auth_1.authenticateToken, auth_1.managerOrAdmin, validation_1.validateId, (0, validation_1.validateQuery)(joi_1.default.object({
+router.get("/:id/performance", auth_1.authenticateToken, (0, auth_1.checkPermission)('reports', 'read'), validation_1.validateId, (0, validation_1.validateQuery)(joi_1.default.object({
     dateFrom: joi_1.default.string().isoDate().optional(),
     dateTo: joi_1.default.string().isoDate().optional(),
 })), stylistController_1.stylistController.getStylistPerformance);
-router.get("/:id/earnings", auth_1.authenticateToken, validation_1.validateId, (0, validation_1.validateQuery)(joi_1.default.object({
+router.get("/:id/earnings", auth_1.authenticateToken, (0, auth_1.checkResourceOwnership)('stylist'), validation_1.validateId, (0, validation_1.validateQuery)(joi_1.default.object({
     dateFrom: joi_1.default.string().isoDate().optional(),
     dateTo: joi_1.default.string().isoDate().optional(),
 })), stylistController_1.stylistController.getStylistEarnings);
@@ -282,15 +282,62 @@ router.get("/:id/reviews", auth_1.authenticateToken, validation_1.validateId, (0
     page: joi_1.default.number().integer().min(1).optional().default(1),
     limit: joi_1.default.number().integer().min(1).max(50).optional().default(20),
 })), stylistController_1.stylistController.getStylistReviews);
-router.post("/:id/services", auth_1.authenticateToken, auth_1.managerOrAdmin, validation_1.validateId, (0, validation_1.validateBody)(joi_1.default.object({
+router.post("/:id/services", auth_1.authenticateToken, (0, auth_1.checkPermission)('stylists', 'update'), validation_1.validateId, (0, validation_1.validateBody)(joi_1.default.object({
     serviceId: joi_1.default.string().required().messages({
         "any.required": "Service ID is required",
         "string.empty": "Service ID cannot be empty",
     }),
 })), stylistController_1.stylistController.assignServiceToStylist);
-router.delete("/:id/services/:serviceId", auth_1.authenticateToken, auth_1.managerOrAdmin, (0, validation_1.validateParams)(joi_1.default.object({
+router.delete("/:id/services/:serviceId", auth_1.authenticateToken, (0, auth_1.checkPermission)('stylists', 'update'), (0, validation_1.validateParams)(joi_1.default.object({
     id: joi_1.default.string().required(),
     serviceId: joi_1.default.string().required(),
 })), stylistController_1.stylistController.removeServiceFromStylist);
+router.get("/:id/schedules", auth_1.authenticateToken, validation_1.validateId, stylistController_1.stylistController.getStylistSchedules);
+router.post("/:id/schedules", auth_1.authenticateToken, (0, auth_1.checkPermission)('stylists', 'update'), validation_1.validateId, (0, validation_1.validateBody)(joi_1.default.object({
+    dayOfWeek: joi_1.default.string()
+        .valid('sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday')
+        .required()
+        .messages({
+        "any.required": "Day of week is required",
+        "any.only": "Day of week must be a valid day name",
+    }),
+    startTime: joi_1.default.string()
+        .pattern(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)
+        .required()
+        .messages({
+        "any.required": "Start time is required",
+        "string.pattern.base": "Start time must be in HH:mm format",
+    }),
+    endTime: joi_1.default.string()
+        .pattern(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)
+        .required()
+        .messages({
+        "any.required": "End time is required",
+        "string.pattern.base": "End time must be in HH:mm format",
+    }),
+    isAvailable: joi_1.default.boolean().optional().default(true),
+})), stylistController_1.stylistController.addStylistSchedule);
+router.put("/:id/schedules/:scheduleId", auth_1.authenticateToken, (0, auth_1.checkPermission)('stylists', 'update'), (0, validation_1.validateParams)(joi_1.default.object({
+    id: joi_1.default.string().required(),
+    scheduleId: joi_1.default.string().required(),
+})), (0, validation_1.validateBody)(joi_1.default.object({
+    startTime: joi_1.default.string()
+        .pattern(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)
+        .optional()
+        .messages({
+        "string.pattern.base": "Start time must be in HH:mm format",
+    }),
+    endTime: joi_1.default.string()
+        .pattern(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)
+        .optional()
+        .messages({
+        "string.pattern.base": "End time must be in HH:mm format",
+    }),
+    isAvailable: joi_1.default.boolean().optional(),
+}).min(1)), stylistController_1.stylistController.updateStylistScheduleEntry);
+router.delete("/:id/schedules/:scheduleId", auth_1.authenticateToken, (0, auth_1.checkPermission)('stylists', 'update'), (0, validation_1.validateParams)(joi_1.default.object({
+    id: joi_1.default.string().required(),
+    scheduleId: joi_1.default.string().required(),
+})), stylistController_1.stylistController.deleteStylistScheduleEntry);
 exports.default = router;
 //# sourceMappingURL=stylists.js.map

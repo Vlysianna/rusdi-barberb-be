@@ -5,11 +5,7 @@ declare class DatabaseSeeder {
     seedServices(): Promise<void>;
     seedStylists(): Promise<void>;
     seedStylistSchedules(): Promise<void>;
-    seedServiceAddons(): Promise<void>;
-    seedNotificationTemplates(): Promise<void>;
-    seedSampleBookings(): Promise<void>;
-    seedSamplePayments(): Promise<void>;
-    seedSampleReviews(): Promise<void>;
+    seedStylistServices(): Promise<void>;
     runAll(): Promise<void>;
     clearAll(): Promise<void>;
 }

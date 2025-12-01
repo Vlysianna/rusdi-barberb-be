@@ -129,6 +129,28 @@ class StylistController {
             await stylistService_1.default.removeServiceFromStylist(id, serviceId);
             return response_1.ApiResponseUtil.success(res, "Service removed from stylist successfully", null);
         });
+        this.getStylistSchedules = (0, errorHandler_1.asyncHandler)(async (req, res, next) => {
+            const { id } = req.params;
+            const schedules = await stylistService_1.default.getStylistSchedules(id);
+            return response_1.ApiResponseUtil.success(res, "Stylist schedules retrieved successfully", schedules);
+        });
+        this.addStylistSchedule = (0, errorHandler_1.asyncHandler)(async (req, res, next) => {
+            const { id } = req.params;
+            const scheduleData = req.body;
+            const schedule = await stylistService_1.default.addStylistSchedule(id, scheduleData);
+            return response_1.ApiResponseUtil.created(res, schedule, "Stylist schedule added successfully");
+        });
+        this.updateStylistScheduleEntry = (0, errorHandler_1.asyncHandler)(async (req, res, next) => {
+            const { id, scheduleId } = req.params;
+            const scheduleData = req.body;
+            const schedule = await stylistService_1.default.updateStylistScheduleEntry(id, scheduleId, scheduleData);
+            return response_1.ApiResponseUtil.success(res, "Stylist schedule updated successfully", schedule);
+        });
+        this.deleteStylistScheduleEntry = (0, errorHandler_1.asyncHandler)(async (req, res, next) => {
+            const { id, scheduleId } = req.params;
+            await stylistService_1.default.deleteStylistScheduleEntry(id, scheduleId);
+            return response_1.ApiResponseUtil.success(res, "Stylist schedule deleted successfully", null);
+        });
     }
 }
 exports.stylistController = new StylistController();

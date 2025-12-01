@@ -96,12 +96,10 @@ class BookingController {
         });
         this.cancelBooking = (0, errorHandler_1.asyncHandler)(async (req, res, next) => {
             const { id } = req.params;
-            const { reason } = req.body;
+            const { reason, cancelReason } = req.body;
+            const cancellationReason = reason || cancelReason || 'Cancelled by user';
             if (!id) {
                 return response_1.ApiResponseUtil.badRequest(res, "Booking ID is required");
-            }
-            if (!reason) {
-                return response_1.ApiResponseUtil.badRequest(res, "Cancellation reason is required");
             }
             const existingBooking = await bookingService_1.default.getBookingById(id);
             if (!existingBooking) {
@@ -111,7 +109,7 @@ class BookingController {
                 existingBooking.customerId !== req.user.userId) {
                 return response_1.ApiResponseUtil.forbidden(res, "You can only cancel your own bookings");
             }
-            const booking = await bookingService_1.default.cancelBooking(id, reason, req.user.userId);
+            const booking = await bookingService_1.default.cancelBooking(id, cancellationReason, req.user.userId);
             return response_1.ApiResponseUtil.success(res, "Booking cancelled successfully", booking);
         });
         this.confirmBooking = (0, errorHandler_1.asyncHandler)(async (req, res, next) => {

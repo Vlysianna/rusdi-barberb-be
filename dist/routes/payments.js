@@ -35,7 +35,7 @@ router.post("/:id/retry", auth_1.authenticateToken, validation_1.validateId, pay
 router.get("/:id/receipt", auth_1.authenticateToken, validation_1.validateId, (0, validation_1.validateQuery)(joi_1.default.object({
     format: joi_1.default.string().valid("json", "pdf").optional().default("json"),
 })), paymentController_1.default.getPaymentReceipt);
-router.post("/:id/refund", auth_1.authenticateToken, auth_1.stylistOrAdmin, validation_1.validateId, (0, validation_1.validateBody)(joi_1.default.object({
+router.post("/:id/refund", auth_1.authenticateToken, (0, auth_1.checkPermission)('payments', 'update'), validation_1.validateId, (0, validation_1.validateBody)(joi_1.default.object({
     reason: joi_1.default.string().min(5).max(500).required().messages({
         "string.min": "Refund reason must be at least 5 characters",
         "string.max": "Refund reason cannot exceed 500 characters",
@@ -45,14 +45,14 @@ router.post("/:id/refund", auth_1.authenticateToken, auth_1.stylistOrAdmin, vali
         "number.positive": "Refund amount must be positive",
     }),
 })), paymentController_1.default.refundPayment);
-router.get("/stats", auth_1.authenticateToken, auth_1.adminOnly, paymentController_1.default.getPaymentStats);
+router.get("/stats", auth_1.authenticateToken, (0, auth_1.checkPermission)('reports', 'read'), paymentController_1.default.getPaymentStats);
 router.get("/customer/:customerId/history", auth_1.authenticateToken, (0, validation_1.validateParams)(joi_1.default.object({
     customerId: joi_1.default.string().required(),
 })), (0, validation_1.validateQuery)(validation_1.queryValidation.pagination.keys({
     status: joi_1.default.string()
         .valid("pending", "paid", "failed", "refunded", "cancelled")
         .optional(),
-})), (0, auth_1.customerResourceAccess)("customerId"), paymentController_1.default.getCustomerPaymentHistory);
+})), (0, auth_1.checkResourceOwnership)('customer'), paymentController_1.default.getCustomerPaymentHistory);
 router.post("/webhooks/:provider", (0, validation_1.validateParams)(joi_1.default.object({
     provider: joi_1.default.string().required(),
 })), paymentController_1.default.paymentWebhook);

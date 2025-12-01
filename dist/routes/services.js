@@ -41,8 +41,8 @@ const createServiceSchema = joi_1.default.object({
     isActive: joi_1.default.boolean().optional().default(true),
     isPopular: joi_1.default.boolean().optional().default(false),
     requirements: joi_1.default.array().items(joi_1.default.string().max(200)).optional().default([]),
-    instructions: joi_1.default.string().max(1000).optional(),
-    image: joi_1.default.string().uri().optional(),
+    instructions: joi_1.default.string().max(1000).optional().allow('', null),
+    image: joi_1.default.string().optional().allow('', null),
     tags: joi_1.default.array().items(joi_1.default.string().max(50)).optional().default([]),
 });
 const updateServiceSchema = joi_1.default.object({
@@ -56,8 +56,8 @@ const updateServiceSchema = joi_1.default.object({
     isActive: joi_1.default.boolean().optional(),
     isPopular: joi_1.default.boolean().optional(),
     requirements: joi_1.default.array().items(joi_1.default.string().max(200)).optional(),
-    instructions: joi_1.default.string().max(1000).optional(),
-    image: joi_1.default.string().uri().optional(),
+    instructions: joi_1.default.string().max(1000).optional().allow('', null),
+    image: joi_1.default.string().optional().allow('', null),
     tags: joi_1.default.array().items(joi_1.default.string().max(50)).optional(),
 }).min(1);
 const querySchema = joi_1.default.object({
@@ -73,7 +73,7 @@ const querySchema = joi_1.default.object({
     maxPrice: joi_1.default.number().positive().optional(),
 });
 router.get("/", auth_1.authenticateToken, (0, validation_1.validateQuery)(querySchema), serviceController_1.serviceController.getAllServices);
-router.post("/", auth_1.authenticateToken, auth_1.managerOrAdmin, (0, validation_1.validateBody)(createServiceSchema), serviceController_1.serviceController.createService);
+router.post("/", auth_1.authenticateToken, (0, auth_1.checkPermission)('services', 'create'), (0, validation_1.validateBody)(createServiceSchema), serviceController_1.serviceController.createService);
 router.get("/active", auth_1.authenticateToken, serviceController_1.serviceController.getActiveServices);
 router.get("/popular", auth_1.authenticateToken, (0, validation_1.validateQuery)(joi_1.default.object({
     limit: joi_1.default.number().integer().min(1).max(50).optional().default(10),
@@ -87,20 +87,20 @@ router.get("/category/:category", auth_1.authenticateToken, (0, validation_1.val
 router.get("/recommended", auth_1.authenticateToken, (0, validation_1.validateQuery)(joi_1.default.object({
     customerId: joi_1.default.string().optional(),
 })), serviceController_1.serviceController.getRecommendedServices);
-router.get("/export", auth_1.authenticateToken, auth_1.managerOrAdmin, (0, validation_1.validateQuery)(joi_1.default.object({
+router.get("/export", auth_1.authenticateToken, (0, auth_1.checkPermission)('services', 'read'), (0, validation_1.validateQuery)(joi_1.default.object({
     format: joi_1.default.string().valid("csv", "excel").optional().default("csv"),
 })), serviceController_1.serviceController.exportServices);
 router.get("/stylist/:stylistId", auth_1.authenticateToken, validation_1.validateId, serviceController_1.serviceController.getServicesByStylist);
 router.get("/:id", auth_1.authenticateToken, validation_1.validateId, serviceController_1.serviceController.getServiceById);
-router.put("/:id", auth_1.authenticateToken, auth_1.managerOrAdmin, validation_1.validateId, (0, validation_1.validateBody)(updateServiceSchema), serviceController_1.serviceController.updateService);
-router.delete("/:id", auth_1.authenticateToken, auth_1.adminOnly, validation_1.validateId, serviceController_1.serviceController.deleteService);
-router.patch("/:id/status", auth_1.authenticateToken, auth_1.managerOrAdmin, validation_1.validateId, (0, validation_1.validateBody)(joi_1.default.object({
+router.put("/:id", auth_1.authenticateToken, (0, auth_1.checkPermission)('services', 'update'), validation_1.validateId, (0, validation_1.validateBody)(updateServiceSchema), serviceController_1.serviceController.updateService);
+router.delete("/:id", auth_1.authenticateToken, (0, auth_1.checkPermission)('services', 'delete'), validation_1.validateId, serviceController_1.serviceController.deleteService);
+router.patch("/:id/status", auth_1.authenticateToken, (0, auth_1.checkPermission)('services', 'update'), validation_1.validateId, (0, validation_1.validateBody)(joi_1.default.object({
     isActive: joi_1.default.boolean().required().messages({
         "any.required": "Status is required",
     }),
 })), serviceController_1.serviceController.updateServiceStatus);
-router.post("/:id/toggle-popular", auth_1.authenticateToken, auth_1.managerOrAdmin, validation_1.validateId, serviceController_1.serviceController.toggleServicePopularity);
-router.get("/:id/analytics", auth_1.authenticateToken, auth_1.managerOrAdmin, validation_1.validateId, (0, validation_1.validateQuery)(joi_1.default.object({
+router.post("/:id/toggle-popular", auth_1.authenticateToken, (0, auth_1.checkPermission)('services', 'update'), validation_1.validateId, serviceController_1.serviceController.toggleServicePopularity);
+router.get("/:id/analytics", auth_1.authenticateToken, (0, auth_1.checkPermission)('reports', 'read'), validation_1.validateId, (0, validation_1.validateQuery)(joi_1.default.object({
     dateFrom: joi_1.default.string().isoDate().optional(),
     dateTo: joi_1.default.string().isoDate().optional(),
 })), serviceController_1.serviceController.getServiceAnalytics);
@@ -121,8 +121,8 @@ router.get("/:id/reviews", auth_1.authenticateToken, validation_1.validateId, (0
     page: joi_1.default.number().integer().min(1).optional().default(1),
     limit: joi_1.default.number().integer().min(1).max(50).optional().default(20),
 })), serviceController_1.serviceController.getServiceReviews);
-router.get("/:id/pricing-history", auth_1.authenticateToken, auth_1.managerOrAdmin, validation_1.validateId, serviceController_1.serviceController.getServicePricingHistory);
-router.patch("/bulk-update", auth_1.authenticateToken, auth_1.managerOrAdmin, (0, validation_1.validateBody)(joi_1.default.object({
+router.get("/:id/pricing-history", auth_1.authenticateToken, (0, auth_1.checkPermission)('services', 'read'), validation_1.validateId, serviceController_1.serviceController.getServicePricingHistory);
+router.patch("/bulk-update", auth_1.authenticateToken, (0, auth_1.checkPermission)('services', 'update'), (0, validation_1.validateBody)(joi_1.default.object({
     serviceIds: joi_1.default.array()
         .items(joi_1.default.string())
         .min(1)

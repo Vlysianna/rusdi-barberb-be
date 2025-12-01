@@ -9,6 +9,15 @@ const database_1 = require("../config/database");
 const user_1 = require("../models/user");
 const jwt_1 = __importDefault(require("../config/jwt"));
 const errorHandler_1 = require("../middleware/errorHandler");
+const otpStorage = new Map();
+setInterval(() => {
+    const now = Date.now();
+    for (const [key, data] of otpStorage.entries()) {
+        if (data.expiresAt < now) {
+            otpStorage.delete(key);
+        }
+    }
+}, 5 * 60 * 1000);
 class AuthService {
     constructor() {
         this.saltRounds = 12;
@@ -56,11 +65,11 @@ class AuthService {
                 isActive: true,
                 emailVerified: false,
             };
-            const [insertResult] = await database_1.db.insert(user_1.users).values(newUserData);
+            const insertResult = await database_1.db.insert(user_1.users).values(newUserData);
             const [createdUser] = await database_1.db
                 .select()
                 .from(user_1.users)
-                .where((0, drizzle_orm_1.eq)(user_1.users.id, insertResult.insertId.toString()))
+                .where((0, drizzle_orm_1.eq)(user_1.users.email, userData.email))
                 .limit(1);
             if (!createdUser) {
                 throw new Error("Failed to create user");
@@ -77,7 +86,8 @@ class AuthService {
             if (error instanceof errorHandler_1.ConflictError) {
                 throw error;
             }
-            throw new Error("Registration failed");
+            console.error('Registration error details:', error);
+            throw new Error(`Registration failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
     async login(email, password) {
@@ -287,6 +297,62 @@ class AuthService {
             }
             throw new Error("Profile update failed");
         }
+    }
+    generatePasswordResetOTP(email) {
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = Date.now() + 10 * 60 * 1000;
+        otpStorage.set(email.toLowerCase(), {
+            otp,
+            email: email.toLowerCase(),
+            expiresAt,
+            attempts: 0,
+        });
+        console.log(`OTP generated for ${email}: ${otp} (expires in 10 minutes)`);
+        return otp;
+    }
+    verifyPasswordResetOTP(email, otp) {
+        const normalizedEmail = email.toLowerCase();
+        const otpData = otpStorage.get(normalizedEmail);
+        if (!otpData) {
+            return { isValid: false, message: "Kode OTP tidak ditemukan. Silakan minta OTP baru." };
+        }
+        if (Date.now() > otpData.expiresAt) {
+            otpStorage.delete(normalizedEmail);
+            return { isValid: false, message: "Kode OTP sudah kadaluarsa. Silakan minta OTP baru." };
+        }
+        if (otpData.attempts >= 5) {
+            otpStorage.delete(normalizedEmail);
+            return { isValid: false, message: "Terlalu banyak percobaan. Silakan minta OTP baru." };
+        }
+        otpData.attempts += 1;
+        if (otpData.otp !== otp) {
+            return { isValid: false, message: `Kode OTP salah. Sisa percobaan: ${5 - otpData.attempts}` };
+        }
+        return { isValid: true, message: "Kode OTP valid." };
+    }
+    async resetPasswordWithOTP(email, otp, newPassword) {
+        const verification = this.verifyPasswordResetOTP(email, otp);
+        if (!verification.isValid) {
+            throw new errorHandler_1.BadRequestError(verification.message);
+        }
+        const [user] = await database_1.db
+            .select()
+            .from(user_1.users)
+            .where((0, drizzle_orm_1.eq)(user_1.users.email, email.toLowerCase()))
+            .limit(1);
+        if (!user) {
+            throw new errorHandler_1.NotFoundError("User tidak ditemukan");
+        }
+        const hashedPassword = await this.hashPassword(newPassword);
+        await database_1.db
+            .update(user_1.users)
+            .set({
+            password: hashedPassword,
+            updatedAt: new Date(),
+        })
+            .where((0, drizzle_orm_1.eq)(user_1.users.id, user.id));
+        otpStorage.delete(email.toLowerCase());
+        console.log(`Password reset successful for ${email}`);
     }
     generatePasswordResetToken(email) {
         const payload = {

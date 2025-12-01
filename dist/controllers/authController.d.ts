@@ -7,6 +7,7 @@ declare class AuthController {
     updateProfile: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
     changePassword: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
     requestPasswordReset: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
+    verifyOTP: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
     resetPassword: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
     verifyEmail: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
     logout: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;

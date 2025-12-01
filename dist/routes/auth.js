@@ -12,6 +12,7 @@ router.post("/register", (0, validation_1.validateBody)(validation_1.userValidat
 router.post("/login", (0, validation_1.validateBody)(validation_1.userValidation.login), authController_1.default.login);
 router.post("/refresh", authController_1.default.refreshToken);
 router.post("/forgot-password", authController_1.default.requestPasswordReset);
+router.post("/verify-otp", authController_1.default.verifyOTP);
 router.post("/reset-password", authController_1.default.resetPassword);
 router.get("/profile", auth_1.authenticateToken, authController_1.default.getProfile);
 router.get("/me", auth_1.authenticateToken, authController_1.default.getProfile);

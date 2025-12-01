@@ -1,6 +1,7 @@
 import { Response, NextFunction } from "express";
 import { AuthenticatedRequest } from "../config/jwt";
 import { UserRole } from "../utils/types";
+export { checkPermission, checkResourceOwnership, restrictTo, checkDashboardAccess, hasPermission } from "./rbac";
 export declare const authenticateToken: (req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>;
 export declare const optionalAuth: (req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>;
 export declare const authorizeRoles: (...roles: UserRole[]) => (req: AuthenticatedRequest, res: Response, next: NextFunction) => void;

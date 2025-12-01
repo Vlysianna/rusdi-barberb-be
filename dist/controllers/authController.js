@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const authService_1 = __importDefault(require("../services/authService"));
+const emailService_1 = __importDefault(require("../services/emailService"));
 const response_1 = require("../utils/response");
 const errorHandler_1 = require("../middleware/errorHandler");
 class AuthController {
@@ -55,30 +56,64 @@ class AuthController {
         this.requestPasswordReset = (0, errorHandler_1.asyncHandler)(async (req, res, next) => {
             const { email } = req.body;
             if (!email) {
-                return response_1.ApiResponseUtil.badRequest(res, "Email is required");
+                return response_1.ApiResponseUtil.badRequest(res, "Email wajib diisi");
             }
             const user = await authService_1.default.getUserByEmail(email);
             if (!user) {
-                return response_1.ApiResponseUtil.success(res, "If the email exists, a password reset link has been sent");
+                return response_1.ApiResponseUtil.success(res, "Jika email terdaftar, kode OTP telah dikirim");
             }
-            const resetToken = authService_1.default.generatePasswordResetToken(email);
-            console.log(`Password reset token for ${email}: ${resetToken}`);
-            return response_1.ApiResponseUtil.success(res, "Password reset link has been sent to your email", {
-                message: "Check your email for the reset link",
-                resetToken: process.env.NODE_ENV === "development" ? resetToken : undefined,
+            const otp = authService_1.default.generatePasswordResetOTP(email);
+            const emailSent = await emailService_1.default.sendPasswordResetOTP(email, otp, user.fullName);
+            if (!emailSent) {
+                console.error(`Failed to send OTP email to ${email}`);
+                return response_1.ApiResponseUtil.error(res, "Gagal mengirim kode OTP. Silakan coba lagi.", undefined, 500);
+            }
+            console.log(`OTP email sent to ${email}`);
+            return response_1.ApiResponseUtil.success(res, "Kode OTP telah dikirim ke email Anda", {
+                message: "Periksa email Anda untuk kode OTP",
+                otp: process.env.NODE_ENV === "development" ? otp : undefined,
+            });
+        });
+        this.verifyOTP = (0, errorHandler_1.asyncHandler)(async (req, res, next) => {
+            const { email, otp } = req.body;
+            if (!email || !otp) {
+                return response_1.ApiResponseUtil.badRequest(res, "Email dan kode OTP wajib diisi");
+            }
+            const result = authService_1.default.verifyPasswordResetOTP(email, otp);
+            if (!result.isValid) {
+                return response_1.ApiResponseUtil.badRequest(res, result.message);
+            }
+            return response_1.ApiResponseUtil.success(res, "Kode OTP valid", {
+                verified: true,
             });
         });
         this.resetPassword = (0, errorHandler_1.asyncHandler)(async (req, res, next) => {
-            const { token, newPassword } = req.body;
-            if (!token || !newPassword) {
-                return response_1.ApiResponseUtil.badRequest(res, "Token and new password are required");
+            const { email, otp, newPassword } = req.body;
+            if (req.body.token) {
+                const { token, newPassword: password } = req.body;
+                if (!token || !password) {
+                    return response_1.ApiResponseUtil.badRequest(res, "Token dan password baru wajib diisi");
+                }
+                const { email: tokenEmail, isValid } = authService_1.default.verifyPasswordResetToken(token);
+                if (!isValid) {
+                    return response_1.ApiResponseUtil.badRequest(res, "Token tidak valid atau sudah kadaluarsa");
+                }
+                await authService_1.default.resetPassword(tokenEmail, password);
+                return response_1.ApiResponseUtil.success(res, "Password berhasil direset");
             }
-            const { email, isValid } = authService_1.default.verifyPasswordResetToken(token);
-            if (!isValid) {
-                return response_1.ApiResponseUtil.badRequest(res, "Invalid or expired reset token");
+            if (!email || !otp || !newPassword) {
+                return response_1.ApiResponseUtil.badRequest(res, "Email, kode OTP, dan password baru wajib diisi");
             }
-            await authService_1.default.resetPassword(email, newPassword);
-            return response_1.ApiResponseUtil.success(res, "Password reset successfully");
+            if (newPassword.length < 6) {
+                return response_1.ApiResponseUtil.badRequest(res, "Password minimal 6 karakter");
+            }
+            try {
+                await authService_1.default.resetPasswordWithOTP(email, otp, newPassword);
+                return response_1.ApiResponseUtil.success(res, "Password berhasil direset");
+            }
+            catch (error) {
+                return response_1.ApiResponseUtil.badRequest(res, error.message || "Gagal reset password");
+            }
         });
         this.verifyEmail = (0, errorHandler_1.asyncHandler)(async (req, res, next) => {
             const userId = req.user.userId;

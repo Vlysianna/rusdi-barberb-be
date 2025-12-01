@@ -188,30 +188,30 @@ exports.bookingValidation = {
         serviceId: joi_1.default.string().required().messages({
             "any.required": "Service selection is required",
         }),
-        appointmentDate: joi_1.default.date().iso().min("now").required().messages({
-            "date.min": "Appointment date cannot be in the past",
+        appointmentDate: joi_1.default.date().iso().required().messages({
             "any.required": "Appointment date is required",
         }),
         appointmentTime: joi_1.default.string()
-            .pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+            .pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/)
             .required()
             .messages({
-            "string.pattern.base": "Please provide a valid time in HH:MM format",
+            "string.pattern.base": "Please provide a valid time in HH:MM or HH:MM:SS format",
             "any.required": "Appointment time is required",
         }),
-        notes: joi_1.default.string().max(500).optional().messages({
+        notes: joi_1.default.string().max(500).optional().allow('', null).messages({
             "string.max": "Notes cannot exceed 500 characters",
         }),
+        addons: joi_1.default.array().items(joi_1.default.string()).optional(),
     }),
     update: joi_1.default.object({
-        appointmentDate: joi_1.default.date().iso().min("now").optional().messages({
-            "date.min": "Appointment date cannot be in the past",
+        appointmentDate: joi_1.default.date().iso().optional().messages({
+            "date.base": "Please provide a valid date",
         }),
         appointmentTime: joi_1.default.string()
-            .pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+            .pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/)
             .optional()
             .messages({
-            "string.pattern.base": "Please provide a valid time in HH:MM format",
+            "string.pattern.base": "Please provide a valid time in HH:MM or HH:MM:SS format",
         }),
         status: joi_1.default.string()
             .valid("pending", "confirmed", "in_progress", "completed", "cancelled", "no_show")
