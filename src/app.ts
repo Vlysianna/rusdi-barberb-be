@@ -23,10 +23,12 @@ dotenv.config();
 class App {
   public app: Application;
   public port: string | number;
+  public basePath: string;
 
   constructor() {
     this.app = express();
     this.port = process.env.PORT || 3000;
+    this.basePath = process.env.BASE_PATH || "";
 
     this.initializeMiddlewares();
     this.initializeRoutes();
@@ -45,6 +47,10 @@ class App {
       "http://192.168.1.32:8081",
       "http://192.168.1.32:19000",
       "http://192.168.1.32:19006",
+      // Production URLs
+      "https://asessment24.site",
+      "https://admin.asessment24.site",
+      "https://barber-admin.asessment24.site",
     ];
 
     const corsOptions = {
@@ -59,8 +65,8 @@ class App {
           return callback(null, true);
         }
         
-        // In production, check against allowed origins
-        if (allowedOrigins.includes(origin)) {
+        // In production, check against allowed origins or allow if from same domain
+        if (allowedOrigins.includes(origin) || origin.includes("asessment24.site")) {
           return callback(null, true);
         }
         
@@ -104,7 +110,7 @@ class App {
     }
 
     // Health check endpoint
-    this.app.get("/health", (req, res) => {
+    this.app.get(`${this.basePath}/health`, (req, res) => {
       res.status(200).json({
         status: "OK",
         timestamp: new Date().toISOString(),
@@ -115,7 +121,7 @@ class App {
     });
 
     // Health check endpoint for v1 API
-    this.app.get("/api/v1/health", (req, res) => {
+    this.app.get(`${this.basePath}/api/v1/health`, (req, res) => {
       res.status(200).json({
         status: "OK",
         timestamp: new Date().toISOString(),
@@ -126,33 +132,33 @@ class App {
     });
 
     // API documentation endpoint
-    this.app.get("/", (req, res) => {
+    this.app.get(`${this.basePath}/`, (req, res) => {
       res.json({
         name: "Rusdi Barber API",
         version: "1.0.0",
         description: "Barber shop booking and management system API",
         endpoints: {
-          health: "/health",
-          auth: "/api/v1/auth",
-          users: "/api/v1/users",
-          stylists: "/api/v1/stylists",
-          services: "/api/v1/services",
-          bookings: "/api/v1/bookings",
-          payments: "/api/v1/payments",
-          reviews: "/api/v1/reviews",
-          notifications: "/api/v1/notifications",
-          dashboard: "/api/v1/dashboard",
+          health: `${this.basePath}/health`,
+          auth: `${this.basePath}/api/v1/auth`,
+          users: `${this.basePath}/api/v1/users`,
+          stylists: `${this.basePath}/api/v1/stylists`,
+          services: `${this.basePath}/api/v1/services`,
+          bookings: `${this.basePath}/api/v1/bookings`,
+          payments: `${this.basePath}/api/v1/payments`,
+          reviews: `${this.basePath}/api/v1/reviews`,
+          notifications: `${this.basePath}/api/v1/notifications`,
+          dashboard: `${this.basePath}/api/v1/dashboard`,
         },
         documentation: {
           message: "API documentation will be available soon",
-          swagger: "/api/docs",
+          swagger: `${this.basePath}/api/docs`,
         },
       });
     });
   }
 
   private initializeRoutes(): void {
-    const apiPrefix = "/api/v1";
+    const apiPrefix = `${this.basePath}/api/v1`;
 
     // Authentication routes
     this.app.use(`${apiPrefix}/auth`, authRoutes);
