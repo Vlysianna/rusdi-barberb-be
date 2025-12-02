@@ -1,5 +1,6 @@
 import express, { Application } from "express";
 import cors from "cors";
+import path from "path";
 import * as dotenv from "dotenv";
 import { testConnection } from "./config/database";
 import {
@@ -16,6 +17,7 @@ import serviceRoutes from "./routes/services";
 import bookingRoutes from "./routes/bookings";
 import paymentRoutes from "./routes/payments";
 import dashboardRoutes from "./routes/dashboard";
+import uploadRoutes from "./routes/upload";
 
 // Load environment variables
 dotenv.config();
@@ -183,6 +185,15 @@ class App {
 
     // Dashboard routes
     this.app.use(`${apiPrefix}/dashboard`, dashboardRoutes);
+
+    // Upload routes
+    this.app.use(`${apiPrefix}/upload`, uploadRoutes);
+
+    // Serve uploaded files statically
+    this.app.use(
+      `${this.basePath}/uploads`,
+      express.static(path.join(__dirname, "../uploads"))
+    );
 
     // TODO: Add other routes here as they are created
     // this.app.use(`${apiPrefix}/reviews`, reviewRoutes);

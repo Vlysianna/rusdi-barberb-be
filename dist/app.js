@@ -38,6 +38,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
+const path_1 = __importDefault(require("path"));
 const dotenv = __importStar(require("dotenv"));
 const database_1 = require("./config/database");
 const errorHandler_1 = require("./middleware/errorHandler");
@@ -48,6 +49,7 @@ const services_1 = __importDefault(require("./routes/services"));
 const bookings_1 = __importDefault(require("./routes/bookings"));
 const payments_1 = __importDefault(require("./routes/payments"));
 const dashboard_1 = __importDefault(require("./routes/dashboard"));
+const upload_1 = __importDefault(require("./routes/upload"));
 dotenv.config();
 class App {
     constructor() {
@@ -165,6 +167,8 @@ class App {
         this.app.use(`${apiPrefix}/bookings`, bookings_1.default);
         this.app.use(`${apiPrefix}/payments`, payments_1.default);
         this.app.use(`${apiPrefix}/dashboard`, dashboard_1.default);
+        this.app.use(`${apiPrefix}/upload`, upload_1.default);
+        this.app.use(`${this.basePath}/uploads`, express_1.default.static(path_1.default.join(__dirname, "../uploads")));
     }
     initializeErrorHandling() {
         this.app.use(errorHandler_1.notFoundHandler);
