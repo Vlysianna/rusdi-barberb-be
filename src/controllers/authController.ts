@@ -7,7 +7,7 @@ import { asyncHandler } from "../middleware/errorHandler";
 
 class AuthController {
   /**
-   * Register a new user
+   * Register a new userr
    */
   register = asyncHandler(
     async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -52,6 +52,7 @@ class AuthController {
       if (!refreshToken) {
         return ApiResponseUtil.badRequest(res, "Refresh token is required");
       }
+      
 
       const tokens = await authService.refreshToken(refreshToken);
 
