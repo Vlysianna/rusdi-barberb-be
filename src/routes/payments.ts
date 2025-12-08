@@ -58,11 +58,6 @@ router.get(
 router.post(
   "/booking/:bookingId/pay",
   authenticateToken,
-  validateParams(
-    Joi.object({
-      bookingId: Joi.string().required(),
-    }),
-  ),
   validateBody(
     Joi.object({
       paymentMethod: Joi.string()

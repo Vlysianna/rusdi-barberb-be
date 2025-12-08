@@ -25,9 +25,7 @@ router.get("/", auth_1.authenticateToken, (0, validation_1.validateQuery)(valida
         .optional(),
 })), paymentController_1.default.getPayments);
 router.get("/methods", auth_1.authenticateToken, paymentController_1.default.getPaymentMethods);
-router.post("/booking/:bookingId/pay", auth_1.authenticateToken, (0, validation_1.validateParams)(joi_1.default.object({
-    bookingId: joi_1.default.string().required(),
-})), (0, validation_1.validateBody)(joi_1.default.object({
+router.post("/booking/:bookingId/pay", auth_1.authenticateToken, (0, validation_1.validateBody)(joi_1.default.object({
     paymentMethod: joi_1.default.string()
         .valid("cash", "credit_card", "debit_card", "digital_wallet", "bank_transfer", "ewallet")
         .required(),
