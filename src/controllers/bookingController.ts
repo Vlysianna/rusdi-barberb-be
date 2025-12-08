@@ -24,7 +24,6 @@ class BookingController {
         sortOrder = "desc",
       } = req.query;
 
-      // For customers, only show their own bookings
       let finalCustomerId = customerId as string;
       if (req.user?.role === "customer") {
         finalCustomerId = req.user.userId;
