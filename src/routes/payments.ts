@@ -53,10 +53,10 @@ router.get(
   paymentController.getPaymentMethods,
 );
 
-// POST /payments/booking/:bookingId/pay - Update payment method and process for booking
-// MUST BE BEFORE /:id routes to avoid collision
+// POST /payments/:bookingId/checkout - Update payment method and process for booking
+// MUST BE BEFORE other /:id routes to avoid collision
 router.post(
-  "/booking/:bookingId/pay",
+  "/:bookingId/checkout",
   authenticateToken,
   validateBody(
     Joi.object({
