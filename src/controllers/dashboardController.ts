@@ -2,10 +2,14 @@ import { Request, Response, NextFunction } from "express";
 import { AuthenticatedRequest } from "../config/jwt";
 import { asyncHandler } from "../middleware/errorHandler";
 import { ApiResponseUtil } from "../utils/response";
-import userService from "../services/userService";
-import bookingService from "../services/bookingService";
-import paymentService from "../services/paymentService";
-import reviewService from "../services/reviewService";
+import { db } from "../config/database";
+import { bookings } from "../models/booking";
+import { payments } from "../models/payment";
+import { users } from "../models/user";
+import { stylists } from "../models/stylist";
+import { services } from "../models/service";
+import { reviews } from "../models/review";
+import { eq, and, gte, lte, sql, count, sum, desc } from "drizzle-orm";
 
 class DashboardController {
   /**
@@ -15,115 +19,345 @@ class DashboardController {
     async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
       const { dateFrom, dateTo } = req.query;
 
-      let startDate: Date | undefined;
-      let endDate: Date | undefined;
+      let startDate: Date;
+      let endDate: Date;
 
-      if (dateFrom) {
+      if (dateFrom && dateTo) {
         startDate = new Date(dateFrom as string);
-      }
-
-      if (dateTo) {
         endDate = new Date(dateTo as string);
+        endDate.setHours(23, 59, 59, 999);
+      } else {
+        // Default to current month
+        const now = new Date();
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
       }
 
-      // Get all statistics in parallel
-      const [userStats, bookingStats, paymentStats, reviewStats] =
-        await Promise.all([
-          userService.getUserStats(),
-          bookingService.getBookingStats(),
-          paymentService.getPaymentStats(startDate, endDate),
-          reviewService.getReviewStats(),
-        ]);
+      // Calculate previous period for growth comparison
+      const periodDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      const prevStartDate = new Date(startDate);
+      prevStartDate.setDate(startDate.getDate() - periodDays);
+      const prevEndDate = new Date(startDate);
+      prevEndDate.setDate(startDate.getDate() - 1);
+      prevEndDate.setHours(23, 59, 59, 999);
 
-      // Transform to match frontend DashboardStats interface
+      // 1. Get total revenue from COMPLETED bookings with PAID payments
+      const [currentRevenue] = await db
+        .select({
+          total: sql<number>`COALESCE(SUM(CAST(${payments.amount} AS DECIMAL(10,2))), 0)`,
+        })
+        .from(payments)
+        .innerJoin(bookings, eq(payments.bookingId, bookings.id))
+        .where(
+          and(
+            eq(payments.status, "paid"),
+            eq(bookings.status, "completed"),
+            gte(bookings.completedAt, startDate),
+            lte(bookings.completedAt, endDate)
+          )
+        );
+
+      const [previousRevenue] = await db
+        .select({
+          total: sql<number>`COALESCE(SUM(CAST(${payments.amount} AS DECIMAL(10,2))), 0)`,
+        })
+        .from(payments)
+        .innerJoin(bookings, eq(payments.bookingId, bookings.id))
+        .where(
+          and(
+            eq(payments.status, "paid"),
+            eq(bookings.status, "completed"),
+            gte(bookings.completedAt, prevStartDate),
+            lte(bookings.completedAt, prevEndDate)
+          )
+        );
+
+      const totalRevenue = Number(currentRevenue.total) || 0;
+      const prevTotalRevenue = Number(previousRevenue.total) || 0;
+      const revenueGrowth = prevTotalRevenue > 0 
+        ? ((totalRevenue - prevTotalRevenue) / prevTotalRevenue) * 100 
+        : 0;
+
+      // 2. Get bookings count
+      const [currentBookingsCount] = await db
+        .select({ count: count() })
+        .from(bookings)
+        .where(
+          and(
+            gte(bookings.createdAt, startDate),
+            lte(bookings.createdAt, endDate)
+          )
+        );
+
+      const [previousBookingsCount] = await db
+        .select({ count: count() })
+        .from(bookings)
+        .where(
+          and(
+            gte(bookings.createdAt, prevStartDate),
+            lte(bookings.createdAt, prevEndDate)
+          )
+        );
+
+      const totalBookings = Number(currentBookingsCount.count) || 0;
+      const prevTotalBookings = Number(previousBookingsCount.count) || 0;
+      const bookingsGrowth = prevTotalBookings > 0
+        ? ((totalBookings - prevTotalBookings) / prevTotalBookings) * 100
+        : 0;
+
+      // 3. Get total customers
+      const [currentCustomersCount] = await db
+        .select({ count: count() })
+        .from(users)
+        .where(
+          and(
+            eq(users.role, "customer"),
+            gte(users.createdAt, startDate),
+            lte(users.createdAt, endDate)
+          )
+        );
+
+      const [previousCustomersCount] = await db
+        .select({ count: count() })
+        .from(users)
+        .where(
+          and(
+            eq(users.role, "customer"),
+            gte(users.createdAt, prevStartDate),
+            lte(users.createdAt, prevEndDate)
+          )
+        );
+
+      const [allCustomersCount] = await db
+        .select({ count: count() })
+        .from(users)
+        .where(eq(users.role, "customer"));
+
+      const totalCustomers = Number(allCustomersCount.count) || 0;
+      const newCustomers = Number(currentCustomersCount.count) || 0;
+      const prevNewCustomers = Number(previousCustomersCount.count) || 0;
+      const customersGrowth = prevNewCustomers > 0
+        ? ((newCustomers - prevNewCustomers) / prevNewCustomers) * 100
+        : 0;
+
+      // 4. Get average rating
+      const [currentRating] = await db
+        .select({
+          avg: sql<number>`COALESCE(AVG(${reviews.rating}), 0)`,
+        })
+        .from(reviews)
+        .where(
+          and(
+            gte(reviews.createdAt, startDate),
+            lte(reviews.createdAt, endDate)
+          )
+        );
+
+      const [previousRating] = await db
+        .select({
+          avg: sql<number>`COALESCE(AVG(${reviews.rating}), 0)`,
+        })
+        .from(reviews)
+        .where(
+          and(
+            gte(reviews.createdAt, prevStartDate),
+            lte(reviews.createdAt, prevEndDate)
+          )
+        );
+
+      const averageRating = Number(currentRating.avg) || 0;
+      const prevAverageRating = Number(previousRating.avg) || 0;
+      const ratingChange = averageRating - prevAverageRating;
+
+      // 5. Get revenue by day
+      const revenueByDay = await db
+        .select({
+          date: sql<string>`DATE(${bookings.completedAt})`,
+          amount: sql<number>`COALESCE(SUM(CAST(${payments.amount} AS DECIMAL(10,2))), 0)`,
+        })
+        .from(payments)
+        .innerJoin(bookings, eq(payments.bookingId, bookings.id))
+        .where(
+          and(
+            eq(payments.status, "paid"),
+            eq(bookings.status, "completed"),
+            gte(bookings.completedAt, startDate),
+            lte(bookings.completedAt, endDate)
+          )
+        )
+        .groupBy(sql`DATE(${bookings.completedAt})`)
+        .orderBy(sql`DATE(${bookings.completedAt})`);
+
+      // 6. Get bookings by status
+      const bookingsByStatus = await db
+        .select({
+          status: bookings.status,
+          count: count(),
+        })
+        .from(bookings)
+        .where(
+          and(
+            gte(bookings.createdAt, startDate),
+            lte(bookings.createdAt, endDate)
+          )
+        )
+        .groupBy(bookings.status);
+
+      // 7. Get top services with revenue
+      const topServices = await db
+        .select({
+          id: services.id,
+          name: services.name,
+          bookings: count(),
+          revenue: sql<number>`COALESCE(SUM(CAST(${payments.amount} AS DECIMAL(10,2))), 0)`,
+        })
+        .from(services)
+        .innerJoin(bookings, eq(services.id, bookings.serviceId))
+        .innerJoin(payments, eq(bookings.id, payments.bookingId))
+        .where(
+          and(
+            eq(payments.status, "paid"),
+            eq(bookings.status, "completed"),
+            gte(bookings.completedAt, startDate),
+            lte(bookings.completedAt, endDate)
+          )
+        )
+        .groupBy(services.id, services.name)
+        .orderBy(desc(sql<number>`COALESCE(SUM(CAST(${payments.amount} AS DECIMAL(10,2))), 0)`))
+        .limit(5);
+
+      // 8. Get top stylists
+      const topStylistsData = await db
+        .select({
+          id: stylists.id,
+          userId: stylists.userId,
+          bookings: count(),
+          revenue: sql<number>`COALESCE(SUM(CAST(${payments.amount} AS DECIMAL(10,2))), 0)`,
+          rating: stylists.rating,
+        })
+        .from(stylists)
+        .innerJoin(bookings, eq(stylists.id, bookings.stylistId))
+        .innerJoin(payments, eq(bookings.id, payments.bookingId))
+        .where(
+          and(
+            eq(payments.status, "paid"),
+            eq(bookings.status, "completed"),
+            gte(bookings.completedAt, startDate),
+            lte(bookings.completedAt, endDate)
+          )
+        )
+        .groupBy(stylists.id, stylists.userId, stylists.rating)
+        .orderBy(desc(sql<number>`COALESCE(SUM(CAST(${payments.amount} AS DECIMAL(10,2))), 0)`))
+        .limit(5);
+
+      // Get user names for top stylists
+      const topStylists = await Promise.all(
+        topStylistsData.map(async (stylist) => {
+          const [user] = await db
+            .select({ fullName: users.fullName })
+            .from(users)
+            .where(eq(users.id, stylist.userId))
+            .limit(1);
+          
+          return {
+            id: stylist.id,
+            name: user?.fullName || "Unknown",
+            bookings: Number(stylist.bookings),
+            revenue: Number(stylist.revenue),
+            rating: Number(stylist.rating) || 0,
+          };
+        })
+      );
+
+      // 9. Get recent bookings
+      const recentBookingsData = await db
+        .select({
+          id: bookings.id,
+          customerId: bookings.customerId,
+          stylistId: bookings.stylistId,
+          serviceId: bookings.serviceId,
+          appointmentDate: bookings.appointmentDate,
+          appointmentTime: bookings.appointmentTime,
+          status: bookings.status,
+          totalAmount: bookings.totalAmount,
+        })
+        .from(bookings)
+        .where(
+          and(
+            gte(bookings.createdAt, startDate),
+            lte(bookings.createdAt, endDate)
+          )
+        )
+        .orderBy(desc(bookings.createdAt))
+        .limit(10);
+
+      // Get related data for recent bookings
+      const recentBookings = await Promise.all(
+        recentBookingsData.map(async (booking) => {
+          const [customer] = await db
+            .select({ fullName: users.fullName })
+            .from(users)
+            .where(eq(users.id, booking.customerId))
+            .limit(1);
+
+          const [stylist] = await db
+            .select({ userId: stylists.userId })
+            .from(stylists)
+            .where(eq(stylists.id, booking.stylistId))
+            .limit(1);
+
+          const [stylistUser] = stylist
+            ? await db
+                .select({ fullName: users.fullName })
+                .from(users)
+                .where(eq(users.id, stylist.userId))
+                .limit(1)
+            : [null];
+
+          const [service] = await db
+            .select({ name: services.name })
+            .from(services)
+            .where(eq(services.id, booking.serviceId))
+            .limit(1);
+
+          return {
+            id: booking.id,
+            customerName: customer?.fullName || "Unknown",
+            serviceName: service?.name || "Unknown",
+            stylistName: stylistUser?.fullName || "Unknown",
+            appointmentDate: booking.appointmentDate.toISOString().split("T")[0],
+            appointmentTime: booking.appointmentTime,
+            status: booking.status,
+            totalAmount: Number(booking.totalAmount),
+          };
+        })
+      );
+
       const dashboardStats = {
-        totalCustomers: userStats.totalUsers || 0,
-        totalBookings: bookingStats.totalBookings || 0,
-        totalRevenue: paymentStats.totalRevenue?.toString() || "0",
-        averageRating: reviewStats.averageRating || 0,
-        todayBookings: bookingStats.todayBookings || 0,
-        monthlyBookings: bookingStats.thisMonthBookings || 0,
-        pendingBookings: bookingStats.pendingBookings || 0,
-        completedBookings: bookingStats.completedBookings || 0,
-        cancelledBookings: bookingStats.cancelledBookings || 0,
-        topStylists: [], // Will be populated by additional service calls
-        recentBookings: [], // Will be populated by additional service calls
-        monthlyRevenue: [], // Will be populated by additional service calls
-        bookingsByStatus: [
-          {
-            status: "pending",
-            count: bookingStats.pendingBookings || 0,
-            percentage:
-              bookingStats.totalBookings > 0
-                ? ((bookingStats.pendingBookings || 0) /
-                    bookingStats.totalBookings) *
-                  100
-                : 0,
-          },
-          {
-            status: "confirmed",
-            count: bookingStats.confirmedBookings || 0,
-            percentage:
-              bookingStats.totalBookings > 0
-                ? ((bookingStats.confirmedBookings || 0) /
-                    bookingStats.totalBookings) *
-                  100
-                : 0,
-          },
-          {
-            status: "completed",
-            count: bookingStats.completedBookings || 0,
-            percentage:
-              bookingStats.totalBookings > 0
-                ? ((bookingStats.completedBookings || 0) /
-                    bookingStats.totalBookings) *
-                  100
-                : 0,
-          },
-          {
-            status: "cancelled",
-            count: bookingStats.cancelledBookings || 0,
-            percentage:
-              bookingStats.totalBookings > 0
-                ? ((bookingStats.cancelledBookings || 0) /
-                    bookingStats.totalBookings) *
-                  100
-                : 0,
-          },
-        ],
-        // Additional nested data for backward compatibility
-        _detailed: {
-          users: {
-            totalUsers: userStats.totalUsers,
-            activeUsers: userStats.activeUsers,
-            usersByRole: userStats.usersByRole,
-            newUsersThisMonth: userStats.newUsersThisMonth,
-            newUsersToday: userStats.newUsersToday,
-            verifiedUsers: userStats.verifiedUsers,
-          },
-          bookings: {
-            totalBookings: bookingStats.totalBookings,
-            pendingBookings: bookingStats.pendingBookings,
-            confirmedBookings: bookingStats.confirmedBookings,
-            completedBookings: bookingStats.completedBookings,
-            cancelledBookings: bookingStats.cancelledBookings,
-            todayBookings: bookingStats.todayBookings,
-            thisWeekBookings: bookingStats.thisWeekBookings,
-            thisMonthBookings: bookingStats.thisMonthBookings,
-            popularServices: bookingStats.popularServices,
-            averageBookingValue: bookingStats.averageBookingValue,
-          },
-          payments: {
-            statusBreakdown: paymentStats.statusBreakdown,
-            methodBreakdown: paymentStats.methodBreakdown,
-            totalRevenue: paymentStats.totalRevenue,
-          },
-          reviews: reviewStats,
-          dateRange: {
-            from: dateFrom ? new Date(dateFrom as string).toISOString() : null,
-            to: dateTo ? new Date(dateTo as string).toISOString() : null,
-          },
-        },
+        totalRevenue,
+        totalBookings,
+        totalCustomers,
+        averageRating,
+        revenueGrowth,
+        bookingsGrowth,
+        customersGrowth,
+        ratingChange,
+        revenueByDay: revenueByDay.map((item) => ({
+          date: item.date,
+          amount: Number(item.amount),
+        })),
+        bookingsByStatus: bookingsByStatus.map((item) => ({
+          status: item.status,
+          count: Number(item.count),
+        })),
+        topServices: topServices.map((item) => ({
+          id: item.id,
+          name: item.name,
+          bookings: Number(item.bookings),
+          revenue: Number(item.revenue),
+        })),
+        topStylists,
+        recentBookings,
       };
 
       return ApiResponseUtil.success(
