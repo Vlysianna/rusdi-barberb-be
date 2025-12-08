@@ -25,12 +25,6 @@ router.get("/", auth_1.authenticateToken, (0, validation_1.validateQuery)(valida
         .optional(),
 })), paymentController_1.default.getPayments);
 router.get("/methods", auth_1.authenticateToken, paymentController_1.default.getPaymentMethods);
-router.post("/", auth_1.authenticateToken, (0, validation_1.validateBody)(validation_1.paymentValidation.create), paymentController_1.default.createPayment);
-router.get("/:id", auth_1.authenticateToken, validation_1.validateId, paymentController_1.default.getPaymentById);
-router.post("/:id/process", auth_1.authenticateToken, validation_1.validateId, (0, validation_1.validateBody)(joi_1.default.object({
-    transactionId: joi_1.default.string().optional(),
-    gatewayResponse: joi_1.default.object().optional(),
-})), paymentController_1.default.processPayment);
 router.post("/booking/:bookingId/pay", auth_1.authenticateToken, (0, validation_1.validateParams)(joi_1.default.object({
     bookingId: joi_1.default.string().required(),
 })), (0, validation_1.validateBody)(joi_1.default.object({
@@ -39,6 +33,12 @@ router.post("/booking/:bookingId/pay", auth_1.authenticateToken, (0, validation_
         .required(),
     transactionId: joi_1.default.string().optional(),
 })), paymentController_1.default.updatePaymentMethod);
+router.post("/", auth_1.authenticateToken, (0, validation_1.validateBody)(validation_1.paymentValidation.create), paymentController_1.default.createPayment);
+router.get("/:id", auth_1.authenticateToken, validation_1.validateId, paymentController_1.default.getPaymentById);
+router.post("/:id/process", auth_1.authenticateToken, validation_1.validateId, (0, validation_1.validateBody)(joi_1.default.object({
+    transactionId: joi_1.default.string().optional(),
+    gatewayResponse: joi_1.default.object().optional(),
+})), paymentController_1.default.processPayment);
 router.post("/:id/retry", auth_1.authenticateToken, validation_1.validateId, paymentController_1.default.retryPayment);
 router.get("/:id/receipt", auth_1.authenticateToken, validation_1.validateId, (0, validation_1.validateQuery)(joi_1.default.object({
     format: joi_1.default.string().valid("json", "pdf").optional().default("json"),

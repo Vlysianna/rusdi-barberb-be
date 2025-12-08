@@ -53,6 +53,27 @@ router.get(
   paymentController.getPaymentMethods,
 );
 
+// POST /payments/booking/:bookingId/pay - Update payment method and process for booking
+// MUST BE BEFORE /:id routes to avoid collision
+router.post(
+  "/booking/:bookingId/pay",
+  authenticateToken,
+  validateParams(
+    Joi.object({
+      bookingId: Joi.string().required(),
+    }),
+  ),
+  validateBody(
+    Joi.object({
+      paymentMethod: Joi.string()
+        .valid("cash", "credit_card", "debit_card", "digital_wallet", "bank_transfer", "ewallet")
+        .required(),
+      transactionId: Joi.string().optional(),
+    }),
+  ),
+  paymentController.updatePaymentMethod,
+);
+
 // POST /payments - Create new payment
 router.post(
   "/",
@@ -81,26 +102,6 @@ router.post(
     }),
   ),
   paymentController.processPayment,
-);
-
-// POST /payments/booking/:bookingId/pay - Update payment method and process for booking
-router.post(
-  "/booking/:bookingId/pay",
-  authenticateToken,
-  validateParams(
-    Joi.object({
-      bookingId: Joi.string().required(),
-    }),
-  ),
-  validateBody(
-    Joi.object({
-      paymentMethod: Joi.string()
-        .valid("cash", "credit_card", "debit_card", "digital_wallet", "bank_transfer", "ewallet")
-        .required(),
-      transactionId: Joi.string().optional(),
-    }),
-  ),
-  paymentController.updatePaymentMethod,
 );
 
 // POST /payments/:id/retry - Retry failed payment
