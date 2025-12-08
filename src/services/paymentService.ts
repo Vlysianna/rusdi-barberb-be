@@ -352,6 +352,79 @@ class PaymentService {
   }
 
   /**
+   * Update payment method and process payment
+   */
+  async updatePaymentMethodAndProcess(
+    bookingId: string,
+    method: PaymentMethod,
+    transactionId?: string,
+  ): Promise<PaymentWithDetails> {
+    try {
+      // Find existing payment for this booking
+      const [existingPayment] = await db
+        .select()
+        .from(payments)
+        .where(eq(payments.bookingId, bookingId))
+        .limit(1);
+
+      if (!existingPayment) {
+        throw new NotFoundError("Payment not found for this booking");
+      }
+
+      // Process payment through gateway (dummy implementation)
+      const gatewayResponse = await this.processPaymentGateway({
+        amount: parseFloat(existingPayment.amount),
+        method,
+        bookingId,
+      });
+
+      // Update payment with new method and status
+      const updatedStatus = gatewayResponse.success
+        ? PaymentStatus.PAID
+        : PaymentStatus.FAILED;
+
+      await db
+        .update(payments)
+        .set({
+          method,
+          status: updatedStatus,
+          transactionId: transactionId || gatewayResponse.transactionId,
+          paymentGatewayResponse: gatewayResponse.gatewayResponse,
+          paidAt: gatewayResponse.success ? new Date() : undefined,
+          failedAt: !gatewayResponse.success ? new Date() : undefined,
+          updatedAt: new Date(),
+        })
+        .where(eq(payments.id, existingPayment.id));
+
+      // If payment successful, update booking status to confirmed
+      if (gatewayResponse.success) {
+        await db
+          .update(bookings)
+          .set({
+            status: "confirmed",
+            confirmedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(bookings.id, bookingId));
+      }
+
+      // Return updated payment
+      const updatedPayment = await this.getPaymentById(existingPayment.id);
+
+      if (!updatedPayment) {
+        throw new DatabaseError("Failed to update payment");
+      }
+
+      return updatedPayment;
+    } catch (error) {
+      if (error instanceof NotFoundError || error instanceof DatabaseError) {
+        throw error;
+      }
+      throw new DatabaseError(`Failed to update payment method: ${error}`);
+    }
+  }
+
+  /**
    * Process refund
    */
   async processRefund(

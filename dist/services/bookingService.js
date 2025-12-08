@@ -280,6 +280,18 @@ class BookingService {
                 notes,
             };
             await database_1.db.insert(booking_1.bookings).values(newBookingData);
+            const { payments } = await Promise.resolve().then(() => __importStar(require("../models/payment")));
+            const paymentId = createId();
+            await database_1.db.insert(payments).values({
+                id: paymentId,
+                bookingId: bookingId,
+                customerId: customerId,
+                amount: service.price,
+                method: "cash",
+                status: "pending",
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            });
             await this.logBookingHistory({
                 bookingId: bookingId,
                 action: "CREATED",

@@ -164,6 +164,59 @@ class PaymentController {
   );
 
   /**
+   * Update payment method and process for a booking
+   */
+  updatePaymentMethod = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      const { bookingId } = req.params;
+      const { paymentMethod, transactionId } = req.body;
+
+      if (!bookingId) {
+        return ApiResponseUtil.badRequest(res, "Booking ID is required");
+      }
+
+      if (!paymentMethod) {
+        return ApiResponseUtil.badRequest(res, "Payment method is required");
+      }
+
+      // Map frontend payment method to backend enum
+      let method: PaymentMethod;
+      switch (paymentMethod) {
+        case 'cash':
+          method = 'cash' as PaymentMethod;
+          break;
+        case 'bank_transfer':
+          method = 'bank_transfer' as PaymentMethod;
+          break;
+        case 'ewallet':
+        case 'digital_wallet':
+          method = 'digital_wallet' as PaymentMethod;
+          break;
+        case 'credit_card':
+          method = 'credit_card' as PaymentMethod;
+          break;
+        case 'debit_card':
+          method = 'debit_card' as PaymentMethod;
+          break;
+        default:
+          method = 'cash' as PaymentMethod;
+      }
+
+      const payment = await paymentService.updatePaymentMethodAndProcess(
+        bookingId,
+        method,
+        transactionId,
+      );
+
+      return ApiResponseUtil.success(
+        res,
+        "Payment processed successfully",
+        payment,
+      );
+    },
+  );
+
+  /**
    * Refund payment (Admin/Stylist only)
    */
   refundPayment = asyncHandler(

@@ -439,6 +439,21 @@ class BookingService {
 
       await db.insert(bookings).values(newBookingData);
 
+      // Auto-create payment record with pending status
+      const { payments } = await import("../models/payment");
+      const paymentId = createId();
+      
+      await db.insert(payments).values({
+        id: paymentId,
+        bookingId: bookingId,
+        customerId: customerId,
+        amount: service.price,
+        method: "cash", // Default to cash, will be updated when user selects payment method
+        status: "pending",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
       // Log booking history
       await this.logBookingHistory({
         bookingId: bookingId,

@@ -40,6 +40,7 @@ declare class PaymentService {
         customerId?: string;
     }): Promise<PaymentWithDetails>;
     updatePaymentStatus(paymentId: string, status: PaymentStatus, transactionId?: string, gatewayResponse?: any): Promise<PaymentWithDetails>;
+    updatePaymentMethodAndProcess(bookingId: string, method: PaymentMethod, transactionId?: string): Promise<PaymentWithDetails>;
     processRefund(paymentId: string, refundAmount?: number, reason?: string): Promise<PaymentWithDetails>;
     getPaymentStats(startDate?: Date, endDate?: Date): Promise<{
         statusBreakdown: {

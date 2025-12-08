@@ -220,6 +220,59 @@ class PaymentService {
             throw new errorHandler_1.DatabaseError(`Failed to update payment status: ${error}`);
         }
     }
+    async updatePaymentMethodAndProcess(bookingId, method, transactionId) {
+        try {
+            const [existingPayment] = await database_1.db
+                .select()
+                .from(payment_1.payments)
+                .where((0, drizzle_orm_1.eq)(payment_1.payments.bookingId, bookingId))
+                .limit(1);
+            if (!existingPayment) {
+                throw new errorHandler_1.NotFoundError("Payment not found for this booking");
+            }
+            const gatewayResponse = await this.processPaymentGateway({
+                amount: parseFloat(existingPayment.amount),
+                method,
+                bookingId,
+            });
+            const updatedStatus = gatewayResponse.success
+                ? types_1.PaymentStatus.PAID
+                : types_1.PaymentStatus.FAILED;
+            await database_1.db
+                .update(payment_1.payments)
+                .set({
+                method,
+                status: updatedStatus,
+                transactionId: transactionId || gatewayResponse.transactionId,
+                paymentGatewayResponse: gatewayResponse.gatewayResponse,
+                paidAt: gatewayResponse.success ? new Date() : undefined,
+                failedAt: !gatewayResponse.success ? new Date() : undefined,
+                updatedAt: new Date(),
+            })
+                .where((0, drizzle_orm_1.eq)(payment_1.payments.id, existingPayment.id));
+            if (gatewayResponse.success) {
+                await database_1.db
+                    .update(booking_1.bookings)
+                    .set({
+                    status: "confirmed",
+                    confirmedAt: new Date(),
+                    updatedAt: new Date(),
+                })
+                    .where((0, drizzle_orm_1.eq)(booking_1.bookings.id, bookingId));
+            }
+            const updatedPayment = await this.getPaymentById(existingPayment.id);
+            if (!updatedPayment) {
+                throw new errorHandler_1.DatabaseError("Failed to update payment");
+            }
+            return updatedPayment;
+        }
+        catch (error) {
+            if (error instanceof errorHandler_1.NotFoundError || error instanceof errorHandler_1.DatabaseError) {
+                throw error;
+            }
+            throw new errorHandler_1.DatabaseError(`Failed to update payment method: ${error}`);
+        }
+    }
     async processRefund(paymentId, refundAmount, reason) {
         try {
             const payment = await this.getPaymentById(paymentId);

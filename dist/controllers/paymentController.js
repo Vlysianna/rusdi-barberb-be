@@ -77,6 +77,39 @@ class PaymentController {
                 : "Payment processing failed";
             return response_1.ApiResponseUtil.success(res, message, payment);
         });
+        this.updatePaymentMethod = (0, errorHandler_1.asyncHandler)(async (req, res, next) => {
+            const { bookingId } = req.params;
+            const { paymentMethod, transactionId } = req.body;
+            if (!bookingId) {
+                return response_1.ApiResponseUtil.badRequest(res, "Booking ID is required");
+            }
+            if (!paymentMethod) {
+                return response_1.ApiResponseUtil.badRequest(res, "Payment method is required");
+            }
+            let method;
+            switch (paymentMethod) {
+                case 'cash':
+                    method = 'cash';
+                    break;
+                case 'bank_transfer':
+                    method = 'bank_transfer';
+                    break;
+                case 'ewallet':
+                case 'digital_wallet':
+                    method = 'digital_wallet';
+                    break;
+                case 'credit_card':
+                    method = 'credit_card';
+                    break;
+                case 'debit_card':
+                    method = 'debit_card';
+                    break;
+                default:
+                    method = 'cash';
+            }
+            const payment = await paymentService_1.default.updatePaymentMethodAndProcess(bookingId, method, transactionId);
+            return response_1.ApiResponseUtil.success(res, "Payment processed successfully", payment);
+        });
         this.refundPayment = (0, errorHandler_1.asyncHandler)(async (req, res, next) => {
             const { id } = req.params;
             const { reason, amount } = req.body;

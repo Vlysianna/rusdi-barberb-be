@@ -4,6 +4,7 @@ declare class PaymentController {
     getPaymentById: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
     createPayment: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
     processPayment: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
+    updatePaymentMethod: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
     refundPayment: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
     getPaymentStats: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
     getCustomerPaymentHistory: (req: import("express").Request, res: Response, next: NextFunction) => Promise<void>;
