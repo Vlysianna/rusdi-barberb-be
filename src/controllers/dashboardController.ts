@@ -17,6 +17,11 @@ class DashboardController {
    */
   getDashboardStats = asyncHandler(
     async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      // Prevent caching of dashboard data
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
       const { dateFrom, dateTo } = req.query;
 
       let startDate: Date;
@@ -52,8 +57,8 @@ class DashboardController {
           and(
             eq(payments.status, "paid"),
             eq(bookings.status, "completed"),
-            gte(bookings.completedAt, startDate),
-            lte(bookings.completedAt, endDate)
+            gte(sql`COALESCE(${bookings.completedAt}, ${bookings.appointmentDate})`, startDate),
+            lte(sql`COALESCE(${bookings.completedAt}, ${bookings.appointmentDate})`, endDate)
           )
         );
 
@@ -67,8 +72,8 @@ class DashboardController {
           and(
             eq(payments.status, "paid"),
             eq(bookings.status, "completed"),
-            gte(bookings.completedAt, prevStartDate),
-            lte(bookings.completedAt, prevEndDate)
+            gte(sql`COALESCE(${bookings.completedAt}, ${bookings.appointmentDate})`, prevStartDate),
+            lte(sql`COALESCE(${bookings.completedAt}, ${bookings.appointmentDate})`, prevEndDate)
           )
         );
 
@@ -172,7 +177,7 @@ class DashboardController {
       // 5. Get revenue by day
       const revenueByDay = await db
         .select({
-          date: sql<string>`DATE(${bookings.completedAt})`,
+          date: sql<string>`DATE(COALESCE(${bookings.completedAt}, ${bookings.appointmentDate}))`,
           amount: sql<number>`COALESCE(SUM(CAST(${payments.amount} AS DECIMAL(10,2))), 0)`,
         })
         .from(payments)
@@ -181,12 +186,12 @@ class DashboardController {
           and(
             eq(payments.status, "paid"),
             eq(bookings.status, "completed"),
-            gte(bookings.completedAt, startDate),
-            lte(bookings.completedAt, endDate)
+            gte(sql`COALESCE(${bookings.completedAt}, ${bookings.appointmentDate})`, startDate),
+            lte(sql`COALESCE(${bookings.completedAt}, ${bookings.appointmentDate})`, endDate)
           )
         )
-        .groupBy(sql`DATE(${bookings.completedAt})`)
-        .orderBy(sql`DATE(${bookings.completedAt})`);
+        .groupBy(sql`DATE(COALESCE(${bookings.completedAt}, ${bookings.appointmentDate}))`)
+        .orderBy(sql`DATE(COALESCE(${bookings.completedAt}, ${bookings.appointmentDate}))`);
 
       // 6. Get bookings by status
       const bookingsByStatus = await db
@@ -218,8 +223,8 @@ class DashboardController {
           and(
             eq(payments.status, "paid"),
             eq(bookings.status, "completed"),
-            gte(bookings.completedAt, startDate),
-            lte(bookings.completedAt, endDate)
+            gte(sql`COALESCE(${bookings.completedAt}, ${bookings.appointmentDate})`, startDate),
+            lte(sql`COALESCE(${bookings.completedAt}, ${bookings.appointmentDate})`, endDate)
           )
         )
         .groupBy(services.id, services.name)
@@ -242,8 +247,8 @@ class DashboardController {
           and(
             eq(payments.status, "paid"),
             eq(bookings.status, "completed"),
-            gte(bookings.completedAt, startDate),
-            lte(bookings.completedAt, endDate)
+            gte(sql`COALESCE(${bookings.completedAt}, ${bookings.appointmentDate})`, startDate),
+            lte(sql`COALESCE(${bookings.completedAt}, ${bookings.appointmentDate})`, endDate)
           )
         )
         .groupBy(stylists.id, stylists.userId, stylists.rating)

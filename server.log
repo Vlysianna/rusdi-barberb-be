@@ -1,0 +1,46 @@
+
+> rusdi-barber-be@1.0.0 dev
+> ts-node src/server.ts
+
+[dotenv@17.2.3] injecting env (25) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+🔧 BASE_PATH configured as: "/barber"
+✅ Database connection successful
+✅ Application initialized successfully
+🚀 Server running on port 3000
+🌍 Environment: development
+📖 API Documentation: http://localhost:3000
+❤️  Health Check: http://localhost:3000/health
+2025-12-09T01:04:10.403Z - GET /barber/api/v1/health
+2025-12-09T01:04:33.001Z - GET /barber/api/v1/auth/profile
+2025-12-09T01:04:33.017Z - GET /barber/api/v1/auth/profile
+2025-12-09T01:04:33.099Z - GET /barber/api/v1/dashboard/stats
+2025-12-09T01:04:33.104Z - GET /barber/api/v1/dashboard/stats
+2025-12-09T01:04:36.697Z - GET /barber/api/v1/dashboard/stats
+2025-12-09T01:04:39.059Z - GET /barber/api/v1/dashboard/stats
+2025-12-09T01:04:43.959Z - POST /barber/api/v1/auth/login
+2025-12-09T01:04:44.388Z - HEAD /barber/api/v1/dashboard/stats
+2025-12-09T01:04:44.454Z - GET /barber/api/v1/dashboard/stats
+2025-12-09T01:05:08.188Z - GET /barber/api/v1/auth/profile
+2025-12-09T01:05:08.190Z - GET /barber/api/v1/auth/profile
+2025-12-09T01:05:08.248Z - GET /barber/api/v1/dashboard/stats
+2025-12-09T01:05:14.416Z - GET /barber/api/v1/auth/profile
+2025-12-09T01:05:14.419Z - GET /barber/api/v1/auth/profile
+2025-12-09T01:05:14.494Z - GET /barber/api/v1/dashboard/stats
+2025-12-09T01:05:15.518Z - GET /barber/api/v1/auth/profile
+2025-12-09T01:05:15.520Z - GET /barber/api/v1/auth/profile
+2025-12-09T01:05:15.592Z - GET /barber/api/v1/dashboard/stats
+2025-12-09T01:05:22.652Z - GET /barber/api/v1/auth/profile
+2025-12-09T01:05:22.654Z - GET /barber/api/v1/auth/profile
+2025-12-09T01:05:22.724Z - GET /barber/api/v1/dashboard/stats
+2025-12-09T01:05:25.765Z - GET /barber/api/v1/auth/profile
+2025-12-09T01:05:25.767Z - GET /barber/api/v1/auth/profile
+2025-12-09T01:05:25.826Z - GET /barber/api/v1/dashboard/stats
+2025-12-09T01:05:26.795Z - GET /barber/api/v1/auth/profile
+2025-12-09T01:05:26.798Z - GET /barber/api/v1/auth/profile
+2025-12-09T01:05:26.852Z - GET /barber/api/v1/dashboard/stats
+2025-12-09T01:05:30.102Z - POST /barber/api/v1/auth/logout
+2025-12-09T01:05:31.539Z - POST /barber/api/v1/auth/login
+2025-12-09T01:05:31.979Z - GET /barber/api/v1/dashboard/stats
+2025-12-09T01:14:24.544Z - GET /barber/api/v1/auth/profile
+2025-12-09T01:14:24.640Z - GET /barber/api/v1/dashboard/stats

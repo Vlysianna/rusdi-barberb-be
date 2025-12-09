@@ -25,6 +25,7 @@ router.get("/", auth_1.authenticateToken, (0, validation_1.validateQuery)(valida
         .optional(),
 })), paymentController_1.default.getPayments);
 router.get("/methods", auth_1.authenticateToken, paymentController_1.default.getPaymentMethods);
+router.get("/stats", auth_1.authenticateToken, (0, auth_1.checkPermission)('reports', 'read'), paymentController_1.default.getPaymentStats);
 router.post("/:bookingId/checkout", auth_1.authenticateToken, (0, validation_1.validateBody)(joi_1.default.object({
     paymentMethod: joi_1.default.string()
         .valid("cash", "credit_card", "debit_card", "digital_wallet", "bank_transfer", "ewallet")
@@ -51,7 +52,6 @@ router.post("/:id/refund", auth_1.authenticateToken, (0, auth_1.checkPermission)
         "number.positive": "Refund amount must be positive",
     }),
 })), paymentController_1.default.refundPayment);
-router.get("/stats", auth_1.authenticateToken, (0, auth_1.checkPermission)('reports', 'read'), paymentController_1.default.getPaymentStats);
 router.get("/customer/:customerId/history", auth_1.authenticateToken, (0, validation_1.validateParams)(joi_1.default.object({
     customerId: joi_1.default.string().required(),
 })), (0, validation_1.validateQuery)(validation_1.queryValidation.pagination.keys({

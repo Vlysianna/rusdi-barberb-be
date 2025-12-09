@@ -14,6 +14,9 @@ const drizzle_orm_1 = require("drizzle-orm");
 class DashboardController {
     constructor() {
         this.getDashboardStats = (0, errorHandler_1.asyncHandler)(async (req, res, next) => {
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
             const { dateFrom, dateTo } = req.query;
             let startDate;
             let endDate;
@@ -39,14 +42,14 @@ class DashboardController {
             })
                 .from(payment_1.payments)
                 .innerJoin(booking_1.bookings, (0, drizzle_orm_1.eq)(payment_1.payments.bookingId, booking_1.bookings.id))
-                .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(payment_1.payments.status, "paid"), (0, drizzle_orm_1.eq)(booking_1.bookings.status, "completed"), (0, drizzle_orm_1.gte)(booking_1.bookings.completedAt, startDate), (0, drizzle_orm_1.lte)(booking_1.bookings.completedAt, endDate)));
+                .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(payment_1.payments.status, "paid"), (0, drizzle_orm_1.eq)(booking_1.bookings.status, "completed"), (0, drizzle_orm_1.gte)((0, drizzle_orm_1.sql) `COALESCE(${booking_1.bookings.completedAt}, ${booking_1.bookings.appointmentDate})`, startDate), (0, drizzle_orm_1.lte)((0, drizzle_orm_1.sql) `COALESCE(${booking_1.bookings.completedAt}, ${booking_1.bookings.appointmentDate})`, endDate)));
             const [previousRevenue] = await database_1.db
                 .select({
                 total: (0, drizzle_orm_1.sql) `COALESCE(SUM(CAST(${payment_1.payments.amount} AS DECIMAL(10,2))), 0)`,
             })
                 .from(payment_1.payments)
                 .innerJoin(booking_1.bookings, (0, drizzle_orm_1.eq)(payment_1.payments.bookingId, booking_1.bookings.id))
-                .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(payment_1.payments.status, "paid"), (0, drizzle_orm_1.eq)(booking_1.bookings.status, "completed"), (0, drizzle_orm_1.gte)(booking_1.bookings.completedAt, prevStartDate), (0, drizzle_orm_1.lte)(booking_1.bookings.completedAt, prevEndDate)));
+                .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(payment_1.payments.status, "paid"), (0, drizzle_orm_1.eq)(booking_1.bookings.status, "completed"), (0, drizzle_orm_1.gte)((0, drizzle_orm_1.sql) `COALESCE(${booking_1.bookings.completedAt}, ${booking_1.bookings.appointmentDate})`, prevStartDate), (0, drizzle_orm_1.lte)((0, drizzle_orm_1.sql) `COALESCE(${booking_1.bookings.completedAt}, ${booking_1.bookings.appointmentDate})`, prevEndDate)));
             const totalRevenue = Number(currentRevenue.total) || 0;
             const prevTotalRevenue = Number(previousRevenue.total) || 0;
             const revenueGrowth = prevTotalRevenue > 0
@@ -100,14 +103,14 @@ class DashboardController {
             const ratingChange = averageRating - prevAverageRating;
             const revenueByDay = await database_1.db
                 .select({
-                date: (0, drizzle_orm_1.sql) `DATE(${booking_1.bookings.completedAt})`,
+                date: (0, drizzle_orm_1.sql) `DATE(COALESCE(${booking_1.bookings.completedAt}, ${booking_1.bookings.appointmentDate}))`,
                 amount: (0, drizzle_orm_1.sql) `COALESCE(SUM(CAST(${payment_1.payments.amount} AS DECIMAL(10,2))), 0)`,
             })
                 .from(payment_1.payments)
                 .innerJoin(booking_1.bookings, (0, drizzle_orm_1.eq)(payment_1.payments.bookingId, booking_1.bookings.id))
-                .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(payment_1.payments.status, "paid"), (0, drizzle_orm_1.eq)(booking_1.bookings.status, "completed"), (0, drizzle_orm_1.gte)(booking_1.bookings.completedAt, startDate), (0, drizzle_orm_1.lte)(booking_1.bookings.completedAt, endDate)))
-                .groupBy((0, drizzle_orm_1.sql) `DATE(${booking_1.bookings.completedAt})`)
-                .orderBy((0, drizzle_orm_1.sql) `DATE(${booking_1.bookings.completedAt})`);
+                .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(payment_1.payments.status, "paid"), (0, drizzle_orm_1.eq)(booking_1.bookings.status, "completed"), (0, drizzle_orm_1.gte)((0, drizzle_orm_1.sql) `COALESCE(${booking_1.bookings.completedAt}, ${booking_1.bookings.appointmentDate})`, startDate), (0, drizzle_orm_1.lte)((0, drizzle_orm_1.sql) `COALESCE(${booking_1.bookings.completedAt}, ${booking_1.bookings.appointmentDate})`, endDate)))
+                .groupBy((0, drizzle_orm_1.sql) `DATE(COALESCE(${booking_1.bookings.completedAt}, ${booking_1.bookings.appointmentDate}))`)
+                .orderBy((0, drizzle_orm_1.sql) `DATE(COALESCE(${booking_1.bookings.completedAt}, ${booking_1.bookings.appointmentDate}))`);
             const bookingsByStatus = await database_1.db
                 .select({
                 status: booking_1.bookings.status,
@@ -126,7 +129,7 @@ class DashboardController {
                 .from(service_1.services)
                 .innerJoin(booking_1.bookings, (0, drizzle_orm_1.eq)(service_1.services.id, booking_1.bookings.serviceId))
                 .innerJoin(payment_1.payments, (0, drizzle_orm_1.eq)(booking_1.bookings.id, payment_1.payments.bookingId))
-                .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(payment_1.payments.status, "paid"), (0, drizzle_orm_1.eq)(booking_1.bookings.status, "completed"), (0, drizzle_orm_1.gte)(booking_1.bookings.completedAt, startDate), (0, drizzle_orm_1.lte)(booking_1.bookings.completedAt, endDate)))
+                .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(payment_1.payments.status, "paid"), (0, drizzle_orm_1.eq)(booking_1.bookings.status, "completed"), (0, drizzle_orm_1.gte)((0, drizzle_orm_1.sql) `COALESCE(${booking_1.bookings.completedAt}, ${booking_1.bookings.appointmentDate})`, startDate), (0, drizzle_orm_1.lte)((0, drizzle_orm_1.sql) `COALESCE(${booking_1.bookings.completedAt}, ${booking_1.bookings.appointmentDate})`, endDate)))
                 .groupBy(service_1.services.id, service_1.services.name)
                 .orderBy((0, drizzle_orm_1.desc)((0, drizzle_orm_1.sql) `COALESCE(SUM(CAST(${payment_1.payments.amount} AS DECIMAL(10,2))), 0)`))
                 .limit(5);
@@ -141,7 +144,7 @@ class DashboardController {
                 .from(stylist_1.stylists)
                 .innerJoin(booking_1.bookings, (0, drizzle_orm_1.eq)(stylist_1.stylists.id, booking_1.bookings.stylistId))
                 .innerJoin(payment_1.payments, (0, drizzle_orm_1.eq)(booking_1.bookings.id, payment_1.payments.bookingId))
-                .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(payment_1.payments.status, "paid"), (0, drizzle_orm_1.eq)(booking_1.bookings.status, "completed"), (0, drizzle_orm_1.gte)(booking_1.bookings.completedAt, startDate), (0, drizzle_orm_1.lte)(booking_1.bookings.completedAt, endDate)))
+                .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(payment_1.payments.status, "paid"), (0, drizzle_orm_1.eq)(booking_1.bookings.status, "completed"), (0, drizzle_orm_1.gte)((0, drizzle_orm_1.sql) `COALESCE(${booking_1.bookings.completedAt}, ${booking_1.bookings.appointmentDate})`, startDate), (0, drizzle_orm_1.lte)((0, drizzle_orm_1.sql) `COALESCE(${booking_1.bookings.completedAt}, ${booking_1.bookings.appointmentDate})`, endDate)))
                 .groupBy(stylist_1.stylists.id, stylist_1.stylists.userId, stylist_1.stylists.rating)
                 .orderBy((0, drizzle_orm_1.desc)((0, drizzle_orm_1.sql) `COALESCE(SUM(CAST(${payment_1.payments.amount} AS DECIMAL(10,2))), 0)`))
                 .limit(5);

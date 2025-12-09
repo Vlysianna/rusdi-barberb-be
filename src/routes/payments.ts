@@ -53,6 +53,15 @@ router.get(
   paymentController.getPaymentMethods,
 );
 
+// GET /payments/stats - Get payment statistics (Admin)
+// MUST BE BEFORE /:id routes to avoid collision
+router.get(
+  "/stats",
+  authenticateToken,
+  checkPermission('reports', 'read'),
+  paymentController.getPaymentStats,
+);
+
 // POST /payments/:bookingId/checkout - Update payment method and process for booking
 // MUST BE BEFORE other /:id routes to avoid collision
 router.post(
@@ -143,14 +152,6 @@ router.post(
     }),
   ),
   paymentController.refundPayment,
-);
-
-// GET /payments/stats - Get payment statistics (Admin)
-router.get(
-  "/stats",
-  authenticateToken,
-  checkPermission('reports', 'read'),
-  paymentController.getPaymentStats,
 );
 
 /**
