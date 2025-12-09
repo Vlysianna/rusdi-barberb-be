@@ -12,6 +12,8 @@
     "db:migrate": "npx drizzle-kit migrate",
     "db:generate": "npx drizzle-kit generate",
     "db:studio": "npx drizzle-kit studio",
+    "deploy:check": "node deploy-check.js",
+    "deploy:package": "node create-deployment-package.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
